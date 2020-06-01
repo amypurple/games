@@ -1,0 +1,76 @@
+.grid {
+	display: flex;
+	flex-wrap: wrap;
+	width: 380px;
+	height: 420px;
+	border: solid black;
+	background-color: black;
+}
+
+.grid div {
+	width: 20px;
+	height: 20px;
+}
+
+.wall {
+	background-color: blue;
+}
+
+.dot {
+	background-color: white;
+	border: 7px solid black;
+	box-sizing: border-box;
+	border-radius: 10px;
+}
+
+.fruit {
+	background-color: orange;
+	border: 2px solid black;
+	box-sizing: border-box;
+	border-radius: 9px;
+}
+
+.powerup {
+	background-color: white;
+	border: 5px solid black;
+	box-sizing: border-box;
+	border-radius: 10px;
+	animation: blinker 500ms linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
+.dacman {
+	background-color: yellow;
+	border-radius: 10px;
+}
+
+.ghost {
+	border-radius:10px 10px 0px 0px;
+	border: 2px solid black;
+	box-sizing: border-box;	
+}
+
+.blinky {
+	background-color: red;
+	animation:none;
+}
+
+.inky {
+	background-color: cyan;
+	animation:none;
+}
+
+.clyde {
+	background-color: orange;
+	animation:none;
+}
+
+.scared {
+	background-color: blue;
+	animation:none;
+}
