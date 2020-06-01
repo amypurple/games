@@ -16,6 +16,12 @@
 	background-color: blue;
 }
 
+.lair {
+	background-color: blue;
+	border: 2px solid black;
+	box-sizing: border-box;
+}
+
 .dot {
 	background-color: white;
 	border: 7px solid black;

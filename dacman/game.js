@@ -88,15 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
 				square.classList.add('fruit')
 			}		
 			if ( layout[i] === 7 ) {
-				square.classList.add('lair')
+				//square.classList.add('lair')
 				ghosts.push(new Ghost('blinky',i,ghostSpeed))
 			}
 			if ( layout[i] === 8 ) {
-				square.classList.add('lair')
+				//square.classList.add('lair')
 				ghosts.push(new Ghost('inky',i,ghostSpeed))
 			}
 			if ( layout[i] === 9 ) {
-				square.classList.add('lair')
+				//square.classList.add('lair')
 				ghosts.push(new Ghost('clyde',i,ghostSpeed))
 			}
 			grid.appendChild(square)
