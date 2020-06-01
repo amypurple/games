@@ -1,15 +1,25 @@
+body {
+	margin: 0 auto;
+	overflow: hidden;
+	background-color: grey;
+	position:absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%,-50%);
+}
+
 .grid {
 	display: flex;
 	flex-wrap: wrap;
-	width: 380px;
-	height: 420px;
+	width: 76vmin;
+	height: 84vmin;
 	border: solid black;
 	background-color: black;
 }
 
 .grid div {
-	width: 20px;
-	height: 20px;
+	width: 4vmin;
+	height: 4vmin;
 }
 
 .wall {
@@ -18,29 +28,29 @@
 
 .lair {
 	background-color: blue;
-	border: 2px solid black;
+	border: 0.7vmin solid black;
 	box-sizing: border-box;
 }
 
 .dot {
 	background-color: white;
-	border: 7px solid black;
+	border: 1.5vmin solid black;
 	box-sizing: border-box;
-	border-radius: 10px;
+	border-radius: 2vmin;
 }
 
 .fruit {
 	background-color: orange;
-	border: 2px solid black;
+	border: 0.5vmin solid black;
 	box-sizing: border-box;
-	border-radius: 9px;
+	border-radius: 1.7vmin;
 }
 
 .powerup {
 	background-color: white;
-	border: 5px solid black;
+	border: 1vmin solid black;
 	box-sizing: border-box;
-	border-radius: 10px;
+	border-radius: 2vmin;
 	animation: blinker 500ms linear infinite;
 }
 
@@ -52,11 +62,11 @@
 
 .dacman {
 	background-color: yellow;
-	border-radius: 10px;
+	border-radius: 2vmin;
 }
 
 .ghost {
-	border-radius:10px 10px 0px 0px;
+	border-radius:2vmin 2vmin 0 0;
 	border: 2px solid black;
 	box-sizing: border-box;	
 }
