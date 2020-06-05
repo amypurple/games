@@ -1,0 +1,14 @@
+{
+  "short_name": "DacMan2020 Editor",
+  "name": "DacMan 2020 Level Editor",
+  "icons": [
+    {
+      "src": "icon192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait"
+}
