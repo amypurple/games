@@ -14,9 +14,8 @@
         /* Scaling takes place on the display canvas. This is its drawing context. The
         height_width_ratio is used in scaling the buffer to the canvas. */
         context: document.querySelector("canvas").getContext("2d"),
-        /* The height width ratio is the height to width ratio of the tile map. It is
-        used to size the display canvas to match the aspect ratio of the game world. */
-        height_width_ratio: undefined,
+
+        isLandscape: undefined,
 
         isDrawing: false,
 
@@ -24,6 +23,8 @@
         one by one according to the world.map. It then draws the buffer to the display
         canvas and takes care of scaling the buffer image up to the display canvas size. */
         render: function() {
+
+            display.resizeBuffers();
 
             let ghost_numbers = 0;
 
@@ -54,7 +55,7 @@
                     let source_y = tile_sheet.tilesize * (value % tile_sheet.rows);
                     let destination_x = x * world.tilesize;
                     let destination_y = y * world.tilesize;
-                    this.buffer_level.drawImage(tile_sheet.image, source_x, source_y, tile_sheet.tilesize, tile_sheet.tilesize, destination_x, destination_y, world.tilesize, world.tilesize);
+                    display.buffer_level.drawImage(tile_sheet.image, source_x, source_y, tile_sheet.tilesize, tile_sheet.tilesize, destination_x, destination_y, world.tilesize, world.tilesize);
                 }
             }
 
@@ -63,40 +64,61 @@
                 let value = tile_sheet.dictionnary[y];
                 let source_x = tile_sheet.tilesize * Math.floor(value / tile_sheet.rows);
                 let source_y = tile_sheet.tilesize * (value % tile_sheet.rows);
-                let destination_x = 0;
-                let destination_y = y * world.tilesize;
-                this.buffer_palette.drawImage(tile_sheet.image, source_x, source_y, tile_sheet.tilesize, tile_sheet.tilesize, destination_x, destination_y, world.tilesize, world.tilesize);
+                let destination_x = (display.isLandscape) ? 0 : y * world.tilesize;
+                let destination_y = (!display.isLandscape) ? 0 : y * world.tilesize;
+                display.buffer_palette.drawImage(tile_sheet.image, source_x, source_y, tile_sheet.tilesize, tile_sheet.tilesize, destination_x, destination_y, world.tilesize, world.tilesize);
                 if (y == tile_sheet.index) {
-                    this.buffer_palette.lineWidth = "2";
-                    this.buffer_palette.strokeStyle = "white";
-                    this.buffer_palette.beginPath();
-                    this.buffer_palette.rect(destination_x, destination_y, world.tilesize, world.tilesize);
-                    this.buffer_palette.stroke();
+                    display.buffer_palette.lineWidth = "2";
+                    display.buffer_palette.strokeStyle = "white";
+                    display.buffer_palette.beginPath();
+                    display.buffer_palette.rect(destination_x, destination_y, world.tilesize, world.tilesize);
+                    display.buffer_palette.stroke();
                 }
             }
 
-            /* Now we draw the finalized buffer to the display canvas. You don't need to
-            use a buffer; you could draw your tiles directly to the display canvas. If
-            you are going to scale your display canvas at all, however, I recommend this
-            method, because it eliminates antialiasing problems that arize due to scaling
-            individual tiles. It is somewhat slower, however. */
-            this.context.drawImage(this.buffer_level.canvas, 0, 0, this.buffer_level.canvas.width, this.buffer_level.canvas.height, 0, 0, this.context.canvas.height * world.columns / world.rows, this.context.canvas.height);
-            this.context.drawImage(this.buffer_palette.canvas, 0, 0, this.buffer_palette.canvas.width, this.buffer_palette.canvas.height, this.context.canvas.width - this.context.canvas.height / tile_sheet.dictionnary.length, 0, this.context.canvas.height / tile_sheet.dictionnary.length, this.context.canvas.height);
+            /* Now we draw the finalized buffer to the display canvas. */
+            if ( display.isLandscape ) {
+              display.context.drawImage(display.buffer_level.canvas, 0, 0, display.buffer_level.canvas.width, display.buffer_level.canvas.height, 0, 0, display.context.canvas.height * world.columns / world.rows, display.context.canvas.height);
+              display.context.drawImage(display.buffer_palette.canvas, 0, 0, display.buffer_palette.canvas.width, display.buffer_palette.canvas.height, display.context.canvas.width - display.context.canvas.height / tile_sheet.dictionnary.length, 0, display.context.canvas.height / tile_sheet.dictionnary.length, display.context.canvas.height);
+            } else {
+              display.context.drawImage(display.buffer_level.canvas, 0, 0, display.buffer_level.canvas.width, display.buffer_level.canvas.height, 0, 0, display.context.canvas.width, display.context.canvas.width * world.rows / world.columns);
+              display.context.drawImage(display.buffer_palette.canvas, 0, 0, display.buffer_palette.canvas.width, display.buffer_palette.canvas.height, 0, display.context.canvas.height - display.context.canvas.width / tile_sheet.dictionnary.length, display.context.canvas.width, display.context.canvas.width / tile_sheet.dictionnary.length);
+            }
+            console.log(display.context.canvas);
+            console.log(display.context.canvas.height * world.columns / world.rows);
+            console.log(display.context.canvas.width * world.rows / world.columns);
+        },
+
+        resizeBuffers: function() {
+            display.buffer_level.canvas.height = world.rows * world.tilesize;
+            display.buffer_level.canvas.width = world.columns * world.tilesize;
+            if (display.isLandscape) {
+              display.buffer_palette.canvas.height = tile_sheet.dictionnary.length * tile_sheet.tilesize;
+              display.buffer_palette.canvas.width = 1 * tile_sheet.tilesize;
+            } else {
+              display.buffer_palette.canvas.height = 1 * tile_sheet.tilesize;
+              display.buffer_palette.canvas.width = tile_sheet.dictionnary.length * tile_sheet.tilesize;
+            }
         },
 
         /* Resizes the display canvas when the screen is resized. */
         resize: function(event) {
 
-            let offset = 12;
+            let offset = 48;
             let clientWidth = document.documentElement.clientWidth - offset;
             let clientHeight = document.documentElement.clientHeight - offset;
-            let height = clientHeight;
-            let width = height * (19.5 / 21.0 + 1.5 / tile_sheet.dictionnary.length);
-            if (width > clientWidth) {
+            let width = clientWidth
+            let height = clientWidth * (21.5 / 19 + 1.5 / tile_sheet.dictionnary.length);
+            display.isLandscape = false;
+            if (height > clientHeight) {
+              height = clientHeight;
+              width = height * (19.5 / 21.0 + 1.5 / tile_sheet.dictionnary.length);
+              display.isLandscape = true;
+              if (width > clientWidth) {
                 height = (clientWidth / width) * clientHeight;
                 width = clientWidth;
+              }
             }
-
             display.context.canvas.width = width;
             display.context.canvas.height = height;
 
@@ -108,24 +130,44 @@
         },
 
         cursorXY: function(x, y) {
+          if (display.isLandscape) {
             /* Let's determine il click is in level or palette */
-            if (x < this.context.canvas.height * world.columns / world.rows) {
+            if (x < display.context.canvas.height * world.columns / world.rows) {
                 /* it's in the level */
                 /* update level data */
-                let map_y = Math.floor(y * world.rows / this.context.canvas.height);
-                let map_x = Math.floor(x * world.rows / this.context.canvas.height);
+                let map_y = Math.floor(y * world.rows / display.context.canvas.height);
+                let map_x = Math.floor(x * world.rows / display.context.canvas.height);
                 if (world.map[map_y][map_x] != tile_sheet.index) {
                     world.map[map_y][map_x] = tile_sheet.index;
-                    display.render();
+                    this.render();
                 }
             }
-            if (x >= this.context.canvas.width - this.context.canvas.height / tile_sheet.dictionnary.length) {
-                let index = Math.floor(y * tile_sheet.dictionnary.length / this.context.canvas.height);
+            if (x >= display.context.canvas.width - display.context.canvas.height / tile_sheet.dictionnary.length) {
+                let index = Math.floor(y * tile_sheet.dictionnary.length / display.context.canvas.height);
                 if (index != tile_sheet.index) {
                     tile_sheet.index = index;
-                    display.render();
+                    this.render();
                 }
             }
+          } else {
+            if (y < display.context.canvas.width * world.rows / world.columns) {
+                /* it's in the level */
+                /* update level data */
+                let map_y = Math.floor(y * world.columns / display.context.canvas.width);
+                let map_x = Math.floor(x * world.columns / display.context.canvas.width);
+                if (world.map[map_y][map_x] != tile_sheet.index) {
+                    world.map[map_y][map_x] = tile_sheet.index;
+                    this.render();
+                }
+            }
+            if (y >= display.context.canvas.height - display.context.canvas.width / tile_sheet.dictionnary.length) {
+                let index = Math.floor(x * tile_sheet.dictionnary.length / display.context.canvas.width);
+                if (index != tile_sheet.index) {
+                    tile_sheet.index = index;
+                    this.render();
+                }
+            }            
+          }
         },
 
         inCanvas: function(x, y) {
@@ -239,10 +281,6 @@
 
     /* Before we can draw anything we have to load the tile_sheet image. */
     tile_sheet.image.addEventListener("load", function(event) {
-        display.buffer_level.canvas.height = world.rows * world.tilesize;
-        display.buffer_level.canvas.width = world.columns * world.tilesize;
-        display.buffer_palette.canvas.height = tile_sheet.dictionnary.length * tile_sheet.tilesize;
-        display.buffer_palette.canvas.width = 1 * tile_sheet.tilesize;
         display.resize();
     });
 
