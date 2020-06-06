@@ -20,10 +20,36 @@ body {
 }
 
 canvas {
-  background-color:#123;
+  background-color:#234;
 }
 
-h1 {
-  font-size:3.0em;
-  text-align:center;
+header {
+  background-color:#456;
+  font-family: arial;
+  font-size: 30px;
+  width: 100%;
+  height: 40px;
+  padding: 4px 24px 4px 10px;
+  position: absolute;
+  top: 0px;
+  cursor: none;
+}
+
+header div {
+  position: relative;
+  display: inline-block;
+  margin: 0 10px;
+}
+
+.menu {
+  list-style: none;
+  cursor: pointer;
+  background-color:#111;
+  color:#eee;
+  padding: 0 20px;
+}
+
+.menu:hover {
+  background-color:#eee;
+  color:#111;
 }
