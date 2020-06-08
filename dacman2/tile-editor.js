@@ -21,7 +21,7 @@
     const g4 = [0, 1, 2, 2, 4, 4, 4, 16 + 6, 8, 8, 16 + 10, 16 + 10, 4, 16 + 12, 4, 16 + 14];
     const g8 = [0, 1, 2, 1, 4, 16 + 5, 4, 16 + 5, 8, 8, 8, 16 + 9, 8, 8, 16 + 12, 16 + 13];
 
-    var level, game, ghosts, dacman, display, tile_sheet, world;
+    var level, game, ghosts, dacman, teleporters, display, tile_sheet, world;
 
     level = 0;
 
@@ -322,6 +322,7 @@
             ghosts: 0,
             dacman: 0,
             speed: 175,
+            teleporters: [],
 
             start: function() {
                 /* init game variables */
@@ -334,6 +335,7 @@
                 this.ghosts = 0;
                 this.dots = 0;
                 this.dacman = 0;
+                this.teleporters = [];
                 for (let y = 0; y < world.rows; y++) {
                     for (let x = 0; x < world.columns; x++) {
                         let value = world.map[y][x];
@@ -355,9 +357,13 @@
                                     this.ghosts++;
                                 }
                                 break;
+                            case 5:
+                                this.teleporters.push( [y,x] );
+                                break;
                         }
                     }
                 }
+                console.log(this.teleporters);
                 /* Ghange state to GAME */
                 if (this.dacman == 1 && this.dots > 0) {
                     state = states.GAME;
@@ -372,6 +378,32 @@
                 }
                 /* Start timer */
                 this.dacmanTimeID = setInterval(this.moveSprites, tickInterval);
+            },
+
+            teleporterID: function(y,x) {
+              for (let i=0; i<this.teleporters.length; i++)
+              {
+                let value = this.teleporters[i];
+                if (value[0] == y && value[1] == x) {
+                  return i;
+                }
+              }
+            },
+
+            previousTeleporter: function(y,x) {
+              let id = this.teleporterID(y,x);
+              /* go previous */
+              id--;
+              if (id<0) id+=this.teleporters.length;
+              return {y:this.teleporters[id][0], x:this.teleporters[id][1]};
+            },
+
+            nextTeleporter: function(y,x) {
+              let id = this.teleporterID(y,x);
+              /* go previous */
+              id++;
+              if (id==this.teleporters.length) id=0;
+              return {y:this.teleporters[id][0], x:this.teleporters[id][1]};
             },
 
             moveSprites: function() {
@@ -436,6 +468,22 @@
                 if (dacman.hide == 4) {
                     dacman.hide = 0;
                     game.keys--;
+                }
+                /* teleporteur */
+                if (dacman.hide == 5) {
+                    dacman.vanish();
+                    if (dacman.directionX>0 || dacman.directionY>0) {
+                      let value = this.nextTeleporter(dacman.coordinateY,dacman.coordinateX);
+                      dacman.coordinateY = value.y;
+                      dacman.coordinateX = value.x;
+                    }
+                    else
+                    {
+                      let value = this.previousTeleporter(dacman.coordinateY,dacman.coordinateX);
+                      dacman.coordinateY = value.y;
+                      dacman.coordinateX = value.x;
+                    }
+                    dacman.appear();
                 }
                 /* touches fantome */
                 if (dacman.hide == 6) {
@@ -670,17 +718,21 @@
                         if (map_y <= world.rows / 3) {
                             Key.down(Key.UP);
                             Key.up(Key.DOWN);
-                        }
-                        if (map_y >= world.rows * 2 / 3) {
+                        } else if (map_y >= world.rows * 2 / 3) {
                             Key.down(Key.DOWN);
+                            Key.up(Key.UP);
+                        } else {
+                            Key.up(Key.DOWN);
                             Key.up(Key.UP);
                         }
                         if (map_x <= world.columns / 3) {
                             Key.down(Key.LEFT);
                             Key.up(Key.RIGHT);
-                        }
-                        if (map_x >= world.columns * 2 / 3) {
+                        } else if (map_x >= world.columns * 2 / 3) {
                             Key.down(Key.RIGHT);
+                            Key.up(Key.LEFT);
+                        } else {
+                            Key.up(Key.RIGHT);
                             Key.up(Key.LEFT);
                         }
                     }
