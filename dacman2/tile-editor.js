@@ -60,7 +60,7 @@
               this.vanish(numberID);
               this.coordinateY[numberID] = this.originY[numberID];
               this.coordinateX[numberID] = this.originX[numberID];
-              if (this.scared[numberID]) totalscared--;
+              if (this.scared[numberID]) this.totalscared--;
               this.scared[numberID] = 0;
               this.appear(numberID);
               this.directionY[numberID] = 0;
@@ -479,7 +479,7 @@
                   let i = ghosts.id(dacman.coordinateY,dacman.coordinateX);
                   if (ghosts.scared[i]>0)
                   {
-                    dacman.hide = ghost.hide[i];
+                    dacman.hide = ghosts.hide[i];
                     ghosts.reset(i);
                     game.score += ghosts.ghostscore;
                   }
@@ -708,14 +708,10 @@
                       this.render();
                     }
                     else if (state == states.GAME) {
-                      Key.up(Key.UP);
-                      Key.up(Key.DOWN);
-                      Key.up(Key.LEFT);
-                      Key.up(Key.RIGHT);
-                      if (map_y<=world.rows/3) Key.down(Key.UP);
-                      if (map_y>=world.rows*2/3) Key.down(Key.DOWN);
-                      if (map_x<=world.columns/3) Key.down(Key.LEFT);
-                      if (map_x>=world.columns*2/3) Key.down(Key.RIGHT);
+                      if (map_y<=world.rows/3) {Key.down(Key.UP); Key.up(Key.DOWN);}
+                      if (map_y>=world.rows*2/3) {Key.down(Key.DOWN); Key.up(Key.UP);}
+                      if (map_x<=world.columns/3) {Key.down(Key.LEFT); Key.up(Key.RIGHT);}
+                      if (map_x>=world.columns*2/3) {Key.down(Key.RIGHT); Key.up(Key.LEFT);}
                     }
                 }
                 if (x >= display.context.canvas.width - display.context.canvas.height / tile_sheet.dictionnary.length) {
@@ -738,14 +734,10 @@
                         }
                       this.render();
                     } else if (state == states.GAME) {
-                      Key.up(Key.UP);
-                      Key.up(Key.DOWN);
-                      Key.up(Key.LEFT);
-                      Key.up(Key.RIGHT);
-                      if (map_y<=world.rows/3) Key.down(Key.UP);
-                      if (map_y>=world.rows*2/3) Key.down(Key.DOWN);
-                      if (map_x<=world.columns/3) Key.down(Key.LEFT);
-                      if (map_x>=world.columns*2/3) Key.down(Key.RIGHT);
+                      if (map_y<=world.rows/3) {Key.down(Key.UP); Key.up(Key.DOWN);}
+                      if (map_y>=world.rows*2/3) {Key.down(Key.DOWN); Key.up(Key.UP);}
+                      if (map_x<=world.columns/3) {Key.down(Key.LEFT); Key.up(Key.RIGHT);}
+                      if (map_x>=world.columns*2/3) {Key.down(Key.RIGHT); Key.up(Key.LEFT);}
                     }
                 }
                 if (y >= display.context.canvas.height - display.context.canvas.width / tile_sheet.dictionnary.length) {
@@ -1057,11 +1049,11 @@
         },
 
         onKeydown: function(event) {
-            down(event.keyCode);
+            Key.down(event.keyCode);
         },
 
         onKeyup: function(event) {
-            up(event.keyCode);
+            Key.up(event.keyCode);
         }
     };
 
