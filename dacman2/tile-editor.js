@@ -71,7 +71,7 @@
             },
             scareAll: function() {
               for (let i = 0; i < this.number; i++)
-              if (this.scared[i]==0)
+              if (this.scared[i]==0 && !this.invincible[i])
               {
                 this.scared[i]= this.timeScared;
                 this.totalscared++;
