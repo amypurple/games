@@ -87,22 +87,22 @@
                     let wall = 15;
                     let value = world.getTile(this.coordinateY[i], this.coordinateX[i], 0, 1);
                     /* ghost is blocked by wall, lock and other ghosts */
-                    if (value == 2 || value == 4 || value == 6) {
+                    if (value == 2 || value == 4 || value == 5 || value == 6) {
                         wall -= 1;
                     }
                     value = world.getTile(this.coordinateY[i], this.coordinateX[i], 1, 0);
                     /* ghost is blocked by wall, lock and other ghosts */
-                    if (value == 2 || value == 4 || value == 6) {
+                    if (value == 2 || value == 4 || value == 5 || value == 6) {
                         wall -= 2;
                     }
                     value = world.getTile(this.coordinateY[i], this.coordinateX[i], 0, -1);
                     /* ghost is blocked by wall, lock and other ghosts */
-                    if (value == 2 || value == 4 || value == 6) {
+                    if (value == 2 || value == 4 || value == 5 || value == 6) {
                         wall -= 4;
                     }
                     value = world.getTile(this.coordinateY[i], this.coordinateX[i], -1, 0);
                     /* ghost is blocked by wall, lock and other ghosts */
-                    if (value == 2 || value == 4 || value == 6) {
+                    if (value == 2 || value == 4 || value == 5 || value == 6) {
                         wall -= 8;
                     }
                     let direction = (this.directionX[i] == 1) ? 1 : (this.directionY[i] == 1) ? 2 : (this.directionX[i] == -1) ? 4 : (this.directionY[i] == -1) ? 8 : 0;
