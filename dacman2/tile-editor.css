@@ -41,6 +41,10 @@ header div {
   margin: 0 10px;
 }
 
+header form {
+  display: inline-block;  
+}
+
 .menu {
   list-style: none;
   cursor: pointer;

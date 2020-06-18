@@ -79,6 +79,7 @@
                     }
             },
             move: function() {
+              let dacmanIsDead = false;
                 for (let i = 0; i < this.number; i++) {
                     /* reduce scared level in ghost */
                     if (this.scared[i] > 0) this.scared[i]--;
@@ -179,10 +180,11 @@
                             game.score += this.ghostscore;
                         } else {
                             this.hide[i] = dacman.hide;
-                            dacman.dies();
+                            dacmanIsDead = true;
                         }
                     }
                 }
+                if (dacmanIsDead) dacman.dies();
             },
             id: function(y, x) {
                 for (let i = 0; i < this.limit; i++)
@@ -363,7 +365,7 @@
                         }
                     }
                 }
-                console.log(this.teleporters);
+                /* console.log(this.teleporters); */
                 /* Ghange state to GAME */
                 if (this.dacman == 1 && this.dots > 0) {
                     state = states.GAME;
@@ -412,8 +414,8 @@
                 } else {
                     game.countdown = speeds[level];
                     game.moveDacman();
-                    ghosts.move();
-                    display.render();
+                    if (game.lives>=0 && state == states.GAME) ghosts.move();
+                    if (game.lives>=0 && state == states.GAME) display.render();
                 }
             },
 
@@ -503,6 +505,7 @@
                     setTimeout(function() {
                         alert("YOU WIN");
                         changeStateTo(states.EDITOR);
+                        display.render();
                     }, 100);
                 }
             },
@@ -940,6 +943,17 @@
             [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
         ],
 
+        characters: [
+            '0','1','2','3','4','5','6','7',
+            '8','9','A','B','C','D','E','F',
+            'G','H','I','J','K','L','M','N',
+            'O','P','Q','R','S','T','U','V',
+            'W','X','Y','Z','a','b','c','d',
+            'e','f','g','h','i','j','k','l',
+            'm','n','o','p','q','r','s','t',
+            'u','v','w','x','y','z','-','.'
+        ],
+
         saved: [],
 
         save: function() {
@@ -977,6 +991,212 @@
         getTile: function(y, x, dy, dx) {
             return world.map[world.warpY(y, dy)][world.warpX(x, dx)];
         },
+
+        encode: function() {
+          let output = "";
+          let flag = true;
+          let counter = 0;
+          // WALLS
+          for (let y=0;y<world.rows;y++) {
+            for (let x=0;x<world.columns;x++) {
+              switch (flag)
+              {
+                case true:
+                  if (world.map[y][x]==2) {
+                    counter++;
+                  } else {
+                    while (counter>world.characters.length) {
+                      output += world.characters[world.characters.length-1]+world.characters[0];
+                      counter -= world.characters.length-1;
+                    }
+                    output += world.characters[counter];
+                    flag = false;
+                    counter = 1;
+                  }
+                  break;
+                case false:
+                  if (world.map[y][x]!=2) {
+                    counter++;
+                  } else {
+                    while (counter>world.characters.length) {
+                      output += world.characters[world.characters.length-1]+world.characters[0];
+                      counter -= world.characters.length-1;
+                    }
+                    output += world.characters[counter];
+                    flag = true;
+                    counter = 1;
+                  }
+                  break;
+              }
+            }
+          }
+          while (counter>world.characters.length-1) {
+            output += world.characters[world.characters.length-1]+world.characters[0];
+            counter -= world.characters.length-1;
+          }
+          output += world.characters[counter];
+          // END WALLS
+          // DOTS
+          counter = 0;
+          flag = true;
+          for (let y=0;y<world.rows;y++) {
+            for (let x=0;x<world.columns;x++) {
+              if (world.map[y][x]!=2) {
+                switch (flag)
+                {
+                  case true:
+                    if (world.map[y][x]==1) {
+                      counter++;
+                    } else {
+                      while (counter>world.characters.length) {
+                        output += world.characters[world.characters.length-1]+world.characters[0];
+                        counter -= world.characters.length-1;
+                      }
+                      output += world.characters[counter];
+                      flag = false;
+                      counter = 1;
+                    }
+                    break;
+                  case false:
+                    if (world.map[y][x]!=1) {
+                      counter++;
+                    } else {
+                      while (counter>world.characters.length) {
+                        output += world.characters[world.characters.length-1]+world.characters[0];
+                        counter -= world.characters.length-1;
+                      }
+                      output += world.characters[counter];
+                      flag = true;
+                      counter = 1;
+                    }
+                    break;
+                }
+              }
+            }
+          }
+          while (counter>world.characters.length-1) {
+            output += world.characters[world.characters.length-1]+world.characters[0];
+            counter -= world.characters.length-1;
+          }
+          output += world.characters[counter];
+          // END DOTS
+          // ITEMS
+          counter = 0;
+          flag = false;
+          let offset = tile_sheet.dictionnary.length;
+          for (let y=0;y<world.rows;y++) {
+            for (let x=0;x<world.columns;x++) {
+              if (world.map[y][x]!=2 && world.map[y][x]!=1) {
+                let item = world.map[y][x];                
+                switch (flag)
+                {
+                  case true:
+                    if (world.map[y][x]==0) {
+                      counter++;
+                    } else {
+                      while (counter>world.characters.length-1-offset) {
+                        output += world.characters[world.characters.length-1];
+                        counter -= world.characters.length-1-offset;
+                      }
+                      output += world.characters[counter+offset];
+                      flag = false;
+                      counter = 0;
+                      output += world.characters[world.map[y][x]];
+                    }
+                    break;
+                  case false:
+                    if (world.map[y][x]!=0) {
+                      output += world.characters[world.map[y][x]];
+                    } else {
+                      flag = true;
+                      counter = 1;
+                    }
+                    break;
+                }
+              }
+            }
+          }
+          while (counter>world.characters.length-1-offset) {
+            output += world.characters[world.characters.length-1]+world.characters[0];
+            counter -= world.characters.length-1-offset;
+          }
+          output += world.characters[counter+offset];
+          // END ITEMS          
+          return output;
+        },
+
+        decode: function(input) {
+          let flag = true;
+          let index = 0;
+          // WALLS
+          let value = world.characters.indexOf(input[index]);
+          world.clear();
+          for (let y=0;y<world.rows;y++) {
+            for (let x=0;x<world.columns;x++) {
+              if (world.map[y][x] == 0)
+              {
+                while (value==0)
+                {
+                  flag = !flag;
+                  index++;
+                  value = world.characters.indexOf(input[index]);
+                }
+                world.map[y][x] = (flag) ? 2 : 0;
+                value--;
+              }
+            }
+          }
+          // END WALLS
+          // DOTS
+          flag = true;
+          index++;
+          value = world.characters.indexOf(input[index]);
+          for (let y=0;y<world.rows;y++) {
+            for (let x=0;x<world.columns;x++) {
+              if (world.map[y][x] == 0)
+              {
+                while (value==0)
+                {
+                  flag = !flag;
+                  index++;
+                  value = world.characters.indexOf(input[index]);
+                }
+                world.map[y][x] = (flag) ? 1 : 0;
+                value--;
+              }
+            }
+          }
+          // END DOTS
+          // ITEMS
+          index++;
+          value = world.characters.indexOf(input[index]);
+          if (value>0) {
+            for (let y=0;y<world.rows;y++) {
+              for (let x=0;x<world.columns;x++) {
+                if (world.map[y][x] == 0)
+                {
+                  if (value>tile_sheet.dictionnary.length)
+                  {
+                    value--;
+                    if (value==tile_sheet.dictionnary.length)
+                    {
+                      index++;
+                      value = world.characters.indexOf(input[index]);
+                    }
+                  }                 
+                  else if (value<tile_sheet.dictionnary.length)
+                  {
+                    world.map[y][x] = value;
+                    index++;
+                    value = world.characters.indexOf(input[index]);
+                  } 
+                }
+              }
+            }
+          }
+          // END ITEMS
+        },
+
 
         tilesize: 16,
         columns: 19,
@@ -1054,13 +1274,55 @@
         changeStateTo(states.GAME);
     });
 
+    document.getElementById("share").addEventListener("click", function() {
+        if (navigator.share) {
+          navigator.share({
+            title: 'DACMAN 2020',
+            url: 'http://amypurple.github.io/games/dacman2/index.html?r='+world.encode()
+          }).then(() => {
+            console.log('Thanks for sharing!');
+          })
+          .catch(console.error);
+        } else {
+          var dummy = document.createElement("textarea");
+          document.body.appendChild(dummy);
+          dummy.value = 'http://amypurple.github.io/games/dacman2/index.html?r='+world.encode();
+          dummy.select();
+          document.execCommand("copy");
+          document.body.removeChild(dummy);          // fallback
+        }
+    });
+
+/*
     document.getElementById("level").addEventListener("click", function() {
-        /*
-        console.log("level");
-         */
         level = (level + 1) % 10;
         display.render();
     });
+*/
+    /*
+    shareButton.addEventListener('click', event => {
+      if (navigator.share) {
+        navigator.share({
+          title: 'WebShare API Demo',
+          url: 'https://codepen.io/ayoisaiah/pen/YbNazJ'
+        }).then(() => {
+          console.log('Thanks for sharing!');
+        })
+        .catch(console.error);
+      } else {
+        // fallback
+      }
+    });    
+    */
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const param_run = urlParams.get("r");
+    if (param_run)
+    {
+      world.decode(param_run);
+      changeStateTo(states.GAME);
+    }
 
     var Key = {
         _pressed: {},
