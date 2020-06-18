@@ -512,8 +512,8 @@
 
             reset: function() {
                 /* Reset Ghosts and Dacman positions */
-                ghosts.resetAll();
                 dacman.reset();
+                ghosts.resetAll();
             },
 
             end: function() {
