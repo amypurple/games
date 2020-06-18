@@ -443,6 +443,18 @@
                 /*
                 console.log("dotsleft="+game.dots+", dacman is on item#"+dacman.hide);
                 */
+                /* touches fantome */
+                if (dacman.hide == 6) {
+                    let i = ghosts.id(dacman.coordinateY, dacman.coordinateX);
+                    if (ghosts.scared[i] > 0) {
+                        dacman.hide = ghosts.hide[i];
+                        ghosts.reset(i);
+                        game.score += ghosts.ghostscore;
+                    } else {
+                        dacman.hide = 0;
+                        dacman.dies();
+                    }
+                }               
                 /* gomme */
                 if (dacman.hide == 1) {
                     dacman.hide = 0;
@@ -486,18 +498,6 @@
                       dacman.coordinateX = value.x;
                     }
                     dacman.appear();
-                }
-                /* touches fantome */
-                if (dacman.hide == 6) {
-                    let i = ghosts.id(dacman.coordinateY, dacman.coordinateX);
-                    if (ghosts.scared[i] > 0) {
-                        dacman.hide = ghosts.hide[i];
-                        ghosts.reset(i);
-                        game.score += ghosts.ghostscore;
-                    } else {
-                        dacman.hide = 0;
-                        dacman.dies();
-                    }
                 }
                 /* GAGNE!  si toutes les gommes sont mangées */
                 if (game.dots == 0) {
