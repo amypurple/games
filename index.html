@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #0e0e12;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      color: #888;
+      font-size: 1rem;
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+      align-content: start;
+    }
+
+    .card {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 1.8rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #7c3aed;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+    }
+
+    .card .icon {
+      font-size: 2.4rem;
+      line-height: 1;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f0f0f0;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: #999;
+      line-height: 1.45;
+    }
+
+    .card .tag {
+      margin-top: auto;
+      padding-top: 0.6rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #7c3aed;
+      font-weight: 600;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #555;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Game Portal</h1>
+    <p>Pick a game and have fun</p>
+  </header>
+
+  <main>
+
+    <a class="card" href="dacman/index.html">
+      <div class="icon">👾</div>
+      <h2>Dacman</h2>
+      <p>Classic maze chase. Eat all the dots, dodge the ghosts, survive.</p>
+      <div class="tag">Arcade</div>
+    </a>
+
+    <a class="card" href="dacman2/index.html">
+      <div class="icon">🛠️</div>
+      <h2>Dacman 2020</h2>
+      <p>Level editor &amp; upgraded engine. Build your own mazes and play them.</p>
+      <div class="tag">Arcade &middot; Editor</div>
+    </a>
+
+    <a class="card" href="timelink/index.html">
+      <div class="icon">🖥️</div>
+      <h2>Timelink</h2>
+      <p>An interactive novel on a retro terminal. Your choices shape the story.</p>
+      <div class="tag">Interactive Fiction</div>
+    </a>
+
+  </main>
+
+  <footer>&copy; 2026 Game Portal</footer>
+
+</body>
+</html>

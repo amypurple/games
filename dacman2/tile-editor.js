@@ -15,6 +15,101 @@
     const speeds = [8, 8, 7, 7, 6, 6, 6, 5, 5, 5];
     const tickInterval = 1000.0 / 60;
 
+    /* ── Procedural sound effects (Web Audio API) with freq/volume sweeps ── */
+    var sfx = {
+        ctx: null,
+        muted: false,
+        _ensure: function() {
+            if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.ctx.state === 'suspended') this.ctx.resume();
+        },
+        /* swept tone: freq sweeps from freqStart→freqEnd, vol sweeps from vol→0 */
+        _sweep: function(freqStart, freqEnd, duration, type, vol) {
+            if (this.muted) return;
+            this._ensure();
+            var t = this.ctx.currentTime;
+            var o = this.ctx.createOscillator();
+            var g = this.ctx.createGain();
+            o.type = type || 'square';
+            o.frequency.setValueAtTime(freqStart, t);
+            o.frequency.linearRampToValueAtTime(freqEnd, t + duration);
+            g.gain.setValueAtTime(vol || 0.08, t);
+            g.gain.linearRampToValueAtTime(0, t + duration);
+            o.connect(g);
+            g.connect(this.ctx.destination);
+            o.start(t);
+            o.stop(t + duration);
+        },
+        dot: function() {
+            /* quick upward chirp */
+            this._sweep(500, 700, 0.05, 'square', 0.06);
+        },
+        superDot: function() {
+            /* dramatic rising sweep */
+            this._sweep(300, 900, 0.25, 'square', 0.09);
+        },
+        fruit: function() {
+            /* bright rising triangle sweep */
+            this._sweep(400, 800, 0.15, 'triangle', 0.10);
+        },
+        key: function() {
+            /* shimmering upward sine sweep */
+            this._sweep(700, 1400, 0.14, 'sine', 0.10);
+        },
+        lock: function() {
+            /* descending unlock tone */
+            this._sweep(1200, 600, 0.16, 'sine', 0.10);
+        },
+        teleport: function() {
+            /* wide upward then downward sweep */
+            this._sweep(200, 1400, 0.12, 'sine', 0.08);
+            var self = this;
+            setTimeout(function() { self._sweep(1400, 200, 0.14, 'sine', 0.06); }, 100);
+        },
+        eatGhost: function() {
+            /* crunchy rising sawtooth sweep */
+            this._sweep(150, 900, 0.18, 'sawtooth', 0.08);
+        },
+        die: function() {
+            /* descending death melody ~1.5s */
+            var self = this;
+            var notes = [
+                [500, 450, 0.18, 'square',   0.10],
+                [450, 380, 0.18, 'square',   0.10],
+                [380, 300, 0.20, 'square',   0.09],
+                [300, 220, 0.22, 'sawtooth', 0.09],
+                [220, 150, 0.25, 'sawtooth', 0.08],
+                [150,  60, 0.35, 'sawtooth', 0.10]
+            ];
+            var t = 0;
+            for (var i = 0; i < notes.length; i++) {
+                (function(n, delay) {
+                    setTimeout(function() {
+                        self._sweep(n[0], n[1], n[2], n[3], n[4]);
+                    }, delay);
+                })(notes[i], t);
+                t += notes[i][2] * 1000 * 0.85;
+            }
+        },
+        win: function() {
+            /* ascending fanfare with 4 swept notes */
+            var self = this;
+            var pairs = [[400,550],[500,700],[600,850],[700,1100]];
+            for (var i = 0; i < pairs.length; i++) {
+                (function(p, d) {
+                    setTimeout(function() { self._sweep(p[0], p[1], 0.16, 'square', 0.08); }, d);
+                })(pairs[i], i * 130);
+            }
+        },
+        start: function() {
+            /* quick 3-step rising sweep */
+            this._sweep(280, 380, 0.08, 'square', 0.06);
+            var self = this;
+            setTimeout(function() { self._sweep(380, 500, 0.08, 'square', 0.06); }, 80);
+            setTimeout(function() { self._sweep(500, 660, 0.12, 'square', 0.06); }, 160);
+        }
+    };
+
     const g0 = [0, 1, 2, 16 + 3, 4, 16 + 5, 16 + 6, 16 + 7, 8, 16 + 9, 16 + 10, 16 + 11, 16 + 12, 16 + 13, 16 + 14, 16 + 15];
     const g1 = [0, 1, 2, 1, 4, 1, 2, 16 + 3, 8, 1, 16 + 10, 1, 8, 16 + 9, 16 + 10, 16 + 11];
     const g2 = [0, 1, 2, 2, 4, 16 + 5, 2, 2, 8, 1, 2, 16 + 3, 4, 16 + 5, 16 + 6, 16 + 7];
@@ -178,6 +273,7 @@
                         if (this.scared[i] > 0) {
                             this.reset(i);
                             game.score += this.ghostscore;
+                            sfx.eatGhost();
                         } else {
                             this.hide[i] = dacman.hide;
                             dacmanIsDead = true;
@@ -243,16 +339,21 @@
                 this.appear();
             },
             dies: function() {
-                game.reset();
-                if (game.lives > 0) {
-                    game.lives--;
-                } else {
-                    game.end();
-                    changeStateTo(states.EDITOR);
-                    setTimeout(function() {
-                        alert("GAME OVER");
-                    }, 100);
-                }
+                game.paused = true;
+                sfx.die();
+                setTimeout(function() {
+                    game.paused = false;
+                    game.reset();
+                    if (game.lives > 0) {
+                        game.lives--;
+                    } else {
+                        game.end();
+                        changeStateTo(states.EDITOR);
+                        setTimeout(function() {
+                            alert("GAME OVER");
+                        }, 100);
+                    }
+                }, 1600);
             },
             moveDirection: function(directionY, directionX) {
                 this.vanish();
@@ -369,6 +470,7 @@
                 /* Ghange state to GAME */
                 if (this.dacman == 1 && this.dots > 0) {
                     state = states.GAME;
+                    sfx.start();
                 } else {
                     /*
                       console.log("dots ="+this.dots+" ghosts ="+this.ghosts);
@@ -408,7 +510,10 @@
               return {y:this.teleporters[id][0], x:this.teleporters[id][1]};
             },
 
+            paused: false,
+
             moveSprites: function() {
+                if (game.paused) return;
                 if (game.countdown > 0) {
                     game.countdown--;
                 } else {
@@ -450,6 +555,7 @@
                         dacman.hide = ghosts.hide[i];
                         ghosts.reset(i);
                         game.score += ghosts.ghostscore;
+                        sfx.eatGhost();
                     } else {
                         dacman.hide = 0;
                         dacman.dies();
@@ -460,6 +566,7 @@
                     dacman.hide = 0;
                     game.dots--;
                     game.score += 10;
+                    sfx.dot();
                 }
                 /* super gomme */
                 if (dacman.hide == 9) {
@@ -467,24 +574,29 @@
                     ghosts.scareAll();
                     game.dots--;
                     game.score += 50;
+                    sfx.superDot();
                 }
                 /* fruit */
                 if (dacman.hide == 7) {
                     dacman.hide = 0;
                     game.score += 100;
+                    sfx.fruit();
                 }
                 /* clé */
                 if (dacman.hide == 8) {
                     dacman.hide = 0;
                     game.keys++;
+                    sfx.key();
                 }
                 /* serrure */
                 if (dacman.hide == 4) {
                     dacman.hide = 0;
                     game.keys--;
+                    sfx.lock();
                 }
                 /* teleporteur */
                 if (dacman.hide == 5) {
+                    sfx.teleport();
                     dacman.vanish();
                     if (dacman.directionX>0 || dacman.directionY>0) {
                       let value = this.nextTeleporter(dacman.coordinateY,dacman.coordinateX);
@@ -501,6 +613,7 @@
                 }
                 /* GAGNE!  si toutes les gommes sont mangées */
                 if (game.dots == 0) {
+                    sfx.win();
                     game.end();
                     setTimeout(function() {
                         alert("YOU WIN");
@@ -679,9 +792,9 @@
         /* Resizes the display canvas when the screen is resized. */
         resize: function(event) {
 
-            let offset = 48;
-            let clientWidth = document.documentElement.clientWidth - offset;
-            let clientHeight = document.documentElement.clientHeight - offset;
+            let headerHeight = document.querySelector("header").offsetHeight;
+            let clientWidth = document.documentElement.clientWidth;
+            let clientHeight = document.documentElement.clientHeight - headerHeight;
             let width = clientWidth
             let height = clientWidth * (21.5 / 19 + 1.5 / tile_sheet.dictionnary.length);
             display.isLandscape = false;

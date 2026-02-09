@@ -1,0 +1,2131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TIMELINK — An Interactive Novel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --green: #33ff33;
+      --green-mid: #22aa22;
+      --green-dim: #1a7a1a;
+      --green-dark: #0d440d;
+      --amber: #ffaa00;
+      --amber-dim: #996600;
+      --cyan: #00ffcc;
+      --red: #ff4444;
+      --text: #33ff33;
+      --muted: #1a8a1a;
+      --glow: 0 0 8px rgba(51,255,51,0.5);
+      --glow-strong: 0 0 12px rgba(51,255,51,0.7);
+      --glow-amber: 0 0 8px rgba(255,170,0,0.5);
+      --glow-cyan: 0 0 8px rgba(0,255,204,0.5);
+      --font: 'VT323', 'Courier New', 'Lucida Console', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 20px;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+    /* CRT Scanline Overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0.12) 0px,
+        rgba(0,0,0,0.12) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+    /* CRT Flicker */
+    @keyframes flicker {
+      0%   { opacity: 0.98; }
+      5%   { opacity: 0.95; }
+      10%  { opacity: 0.99; }
+      15%  { opacity: 0.96; }
+      50%  { opacity: 0.98; }
+      100% { opacity: 0.97; }
+    }
+    .crt { animation: flicker 5s infinite; }
+    /* Blinking Cursor */
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .cursor::after {
+      content: '\2588';
+      animation: blink 0.8s infinite;
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+    /* Stat Flash */
+    @keyframes statFlash {
+      0%   { color: #ffffff; text-shadow: 0 0 14px #fff; }
+      100% { color: var(--green); text-shadow: var(--glow); }
+    }
+    .stat-flash { animation: statFlash 0.7s ease-out; }
+    /* Boot Screen */
+    #bootScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+    #bootScreen pre {
+      font-family: var(--font);
+      font-size: 22px;
+      color: var(--green);
+      text-shadow: var(--glow);
+      line-height: 1.6;
+      text-align: left;
+      max-width: 600px;
+      width: 100%;
+    }
+    #bootScreen .boot-prompt {
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+      margin-top: 20px;
+      font-size: 20px;
+      font-family: var(--font);
+    }
+    /* Header */
+    header {
+      border-bottom: 2px solid var(--green-dim);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(51,255,51,0.02);
+    }
+    .title {
+      font-size: 28px;
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+      letter-spacing: 4px;
+    }
+    .header-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .pill {
+      font-size: 15px;
+      color: var(--muted);
+      border: 1px solid var(--green-dark);
+      padding: 2px 8px;
+      font-family: var(--font);
+    }
+    /* Buttons */
+    button {
+      font-family: var(--font);
+      font-size: 18px;
+      background: transparent;
+      color: var(--green);
+      border: 1px solid var(--green-dim);
+      padding: 4px 14px;
+      cursor: pointer;
+      text-shadow: var(--glow);
+      transition: all 0.1s;
+    }
+    button:hover {
+      background: rgba(51,255,51,0.08);
+      border-color: var(--green);
+      box-shadow: 0 0 12px rgba(51,255,51,0.25);
+    }
+    button:active { background: rgba(51,255,51,0.15); }
+    button.primary {
+      color: var(--amber);
+      border-color: var(--amber-dim);
+      text-shadow: var(--glow-amber);
+    }
+    button.primary:hover {
+      background: rgba(255,170,0,0.08);
+      border-color: var(--amber);
+      box-shadow: 0 0 12px rgba(255,170,0,0.25);
+    }
+    /* Main Layout */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      max-width: 1200px;
+      margin: 0 auto;
+      min-height: calc(100vh - 48px);
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .side-panel { border-left: none !important; border-top: 1px solid var(--green-dark); }
+    }
+    /* Scene Panel */
+    .scene-panel {
+      border-right: 1px solid var(--green-dark);
+      padding: 14px 16px;
+    }
+    .scene-header {
+      border-bottom: 1px solid var(--green-dark);
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .scene-title {
+      font-size: 24px;
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+    }
+    .scene-meta {
+      font-size: 16px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .scene-ref {
+      font-size: 14px;
+      color: var(--green-dark);
+      white-space: nowrap;
+    }
+    /* ASCII Art */
+    .ascii-art {
+      border: 1px solid var(--green-dim);
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      white-space: pre;
+      font-family: 'Cascadia Mono', 'Consolas', 'Courier New', 'Lucida Console', monospace;
+      font-size: 14px;
+      line-height: 1.15;
+      color: var(--green-dim);
+      background: rgba(51,255,51,0.015);
+      overflow-x: auto;
+      min-height: 80px;
+    }
+    /* Narration */
+    .narration {
+      color: var(--muted);
+      padding: 8px 12px;
+      border-left: 2px solid var(--green-dark);
+      margin-bottom: 10px;
+      font-size: 19px;
+      line-height: 1.5;
+    }
+    /* Dialogue Box */
+    .dialogue-box {
+      border: 1px solid var(--green-dim);
+      border-left: 3px solid var(--green);
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: rgba(51,255,51,0.025);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .char-svg-container {
+      flex-shrink: 0;
+      width: 70px;
+      height: 130px;
+      border: 1px solid var(--green-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+    }
+    .char-svg-container svg {
+      filter: drop-shadow(0 0 4px rgba(51,255,51,0.4));
+    }
+    .dialogue-content { flex: 1; min-width: 0; }
+    .speaker-line {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .speaker-name {
+      font-size: 22px;
+      color: var(--cyan);
+      text-shadow: var(--glow-cyan);
+    }
+    .speaker-name.system-speaker {
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+    }
+    .speaker-tag {
+      font-size: 14px;
+      color: var(--green-dark);
+      border: 1px solid var(--green-dark);
+      padding: 0 4px;
+    }
+    .dialogue-text {
+      font-size: 21px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      min-height: 1.4em;
+    }
+    /* Choices */
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .choice-btn {
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid var(--green-dark);
+      background: transparent;
+      color: var(--green);
+      font-family: var(--font);
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.1s;
+      display: flex;
+      gap: 10px;
+      line-height: 1.3;
+    }
+    .choice-btn:hover {
+      background: rgba(51,255,51,0.06);
+      border-color: var(--green);
+      box-shadow: 0 0 10px rgba(51,255,51,0.15);
+      padding-left: 20px;
+    }
+    .choice-btn .choice-num {
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+      min-width: 28px;
+      flex-shrink: 0;
+    }
+    .choice-btn.primary-choice { border-color: var(--amber-dim); }
+    .choice-btn.primary-choice:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 10px rgba(255,170,0,0.2);
+    }
+    /* Side Panel */
+    .side-panel {
+      padding: 14px;
+      font-size: 18px;
+      border-left: 1px solid var(--green-dark);
+    }
+    .side-section { margin-bottom: 14px; }
+    .side-title {
+      color: var(--amber);
+      font-size: 20px;
+      border-bottom: 1px solid var(--green-dark);
+      padding-bottom: 3px;
+      margin-bottom: 6px;
+      text-shadow: var(--glow-amber);
+      letter-spacing: 2px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px dotted rgba(51,255,51,0.08);
+    }
+    .stat-label { color: var(--muted); }
+    .stat-value { color: var(--green); text-shadow: var(--glow); }
+    .bond-display {
+      color: var(--cyan);
+      font-size: 20px;
+      text-align: center;
+      padding: 6px;
+      border: 1px solid var(--green-dark);
+      margin-top: 8px;
+      text-shadow: var(--glow-cyan);
+      letter-spacing: 1px;
+    }
+    .sep { border: none; border-top: 1px solid var(--green-dark); margin: 10px 0; }
+    #debugPanel { font-size: 15px; color: var(--green-dark); }
+    #debugPanel .stat-row { border-color: rgba(51,255,51,0.04); }
+    #debugPanel .stat-value { color: var(--green-dark); text-shadow: none; }
+    .toast { font-size: 15px; color: var(--amber-dim); padding: 3px 0; min-height: 1.2em; }
+    /* Ending */
+    .ending-title {
+      font-size: 30px;
+      color: var(--amber);
+      text-shadow: var(--glow-amber);
+      text-align: center;
+      margin: 14px 0 6px;
+      letter-spacing: 3px;
+    }
+    .ending-type { font-size: 17px; color: var(--muted); text-align: center; }
+    .ending-epilogue { padding: 12px 0; }
+    .ending-epilogue p { margin: 8px 0; font-size: 21px; line-height: 1.5; color: var(--green); }
+    .hint-text { font-size: 15px; color: var(--green-dark); margin-top: 8px; }
+    input[type="file"] { display: none; }
+    label.file-btn {
+      font-family: var(--font);
+      font-size: 18px;
+      color: var(--green);
+      border: 1px solid var(--green-dim);
+      padding: 4px 14px;
+      cursor: pointer;
+      display: inline-block;
+      text-shadow: var(--glow);
+    }
+    label.file-btn:hover {
+      background: rgba(51,255,51,0.08);
+      border-color: var(--green);
+    }
+  </style>
+</head>
+<body class="crt">
+
+<!-- BOOT SCREEN -->
+<div id="bootScreen">
+  <pre id="bootText"></pre>
+  <div class="boot-prompt cursor" id="bootPrompt" style="display:none;">PRESS ANY KEY TO BEGIN</div>
+</div>
+
+<!-- HEADER -->
+<header id="gameUI" style="display:none;">
+  <div class="title">TIMELINK</div>
+  <div class="header-controls">
+    <span class="pill" id="pillProject">Loaded: Embedded Script</span>
+    <label class="file-btn" for="fileInput">LOAD</label>
+    <input id="fileInput" type="file" accept="application/json" />
+    <button id="btnRestart" class="primary">RESTART</button>
+    <button id="btnBack">BACK</button>
+    <button id="btnToggleDebug">DEBUG</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main id="mainUI" style="display:none;">
+  <section class="scene-panel">
+    <div class="scene-header">
+      <div>
+        <div class="scene-title" id="uiDayTitle">Day</div>
+        <div class="scene-meta" id="uiDayMeta"></div>
+      </div>
+      <div class="scene-ref" id="uiNodeRef"></div>
+    </div>
+    <pre class="ascii-art" id="uiAsciiArt"></pre>
+    <div class="narration" id="uiNarration" style="display:none;"></div>
+    <div class="dialogue-box" id="uiDialogueBox">
+      <div class="char-svg-container" id="uiCharSvg"></div>
+      <div class="dialogue-content">
+        <div class="speaker-line">
+          <span class="speaker-name" id="uiSpeaker">SYSTEM</span>
+          <span class="speaker-tag" id="uiCharPose">pose</span>
+          <span class="speaker-tag" id="uiCharExpr">expr</span>
+        </div>
+        <div class="dialogue-text" id="uiLine"></div>
+      </div>
+    </div>
+    <div class="choices" id="uiChoices"></div>
+    <div class="toast" id="toast"></div>
+  </section>
+  <aside class="side-panel">
+    <div class="side-section">
+      <div class="side-title">STATUS</div>
+      <div class="stat-row"><span class="stat-label">Interest (I)</span><span class="stat-value" id="statI">0</span></div>
+      <div class="stat-row"><span class="stat-label">Respect (R)</span><span class="stat-value" id="statR">0</span></div>
+      <div class="stat-row"><span class="stat-label">Bond (B)</span><span class="stat-value" id="statB">0</span></div>
+      <div class="bond-display" id="uiBondState">NEUTRAL</div>
+    </div>
+    <hr class="sep">
+    <div class="side-section" id="debugPanel" style="display:none;">
+      <div class="side-title">DEBUG</div>
+      <div class="stat-row"><span class="stat-label">Flags</span><span class="stat-value" id="dbgFlags">&mdash;</span></div>
+      <div class="stat-row"><span class="stat-label">Vars</span><span class="stat-value" id="dbgVars">&mdash;</span></div>
+      <div class="stat-row"><span class="stat-label">History</span><span class="stat-value" id="dbgHistory">0</span></div>
+      <hr class="sep">
+    </div>
+    <div class="side-section">
+      <div class="hint-text">Background and character IDs are placeholders. Hook images later by mapping IDs to URLs.</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+// ════════════════════════════════════════
+//  ASCII ART — Scene Backgrounds
+// ════════════════════════════════════════
+
+const ASCII_ART = {
+
+BG_CONVENTION_HALL_DAY:
+`  ╔════════════════════════════════════════════╗
+  ║    <<  I N D I E   G A M E   C O N  >>     ║
+  ╠════════════════════════════════════════════╣
+  ║     ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐    ║
+  ║     │▒DEMO▒│ │░DEMO░│ │▒DEMO▒│ │░DEMO░│    ║
+  ║     └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘    ║
+  ║      o    o    o    o    o    o    o       ║
+  ║     /|\\  /|\\  /|\\  /|\\  /|\\  /|\\  /|\\      ║
+  ╚════════════════════════════════════════════╝`,
+
+BG_CONVENTION_HALL_EVENING:
+`  ┌───────────────────────────────────────────┐
+  │     i n d i e   g a m e   c o n    ·      │
+  ├───────────────────────────────────────────┤
+  │    ┌──────┐ ┌──────┐                      │
+  │    │ ·  · │ │ ·  · │    ·                 │
+  │    └──────┘ └──────┘                      │
+  │        ·                                  │
+  │      o        o        ·                  │
+  │     /|\\      /|\\                          │
+  └───────────────────────────────────────────┘`,
+
+BG_SMALL_CONVENTION_HALL:
+`  ┌──────────────────────────────────┐
+  │   SMALL INDIE EXPO               │
+  ├──────────────────────────────────┤
+  │   ┌────┐ ┌────┐                  │
+  │   │····│ │····│   ·              │
+  │   └────┘ └────┘                  │
+  │     o        ·                   │
+  │    /|\\                           │
+  └──────────────────────────────────┘`,
+
+BG_OFFICE_HALLWAY:
+`   ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐
+   │  │  │  │  │  │  │  │  │  │  │  │
+   │  │  │  │  │  │  │  │  │  │  │  │
+   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘
+  ════════════════════════════════════
+     MEETING RM    KITCHEN    EXIT
+  ────────────────────────────────────
+            ▒▒▒ WELCOME ▒▒▒`,
+
+BG_OFFICE_BREAK_AREA:
+`  ┌─────────────────────────────────┐
+  │  ┌──────┐                       │
+  │  │COFFEE│  ┌────┐               │
+  │  │ ░▒▓  │  │    │               │
+  │  └──────┘  │    │               │
+  │            └────┘               │
+  │       o         o               │
+  │      /|\\       /|\\              │
+  └─────────────────────────────────┘`,
+
+BG_RESTAURANT_CASUAL:
+`       ·      ·       ·      ·
+  ┌────────────────────────────┐
+  │  ╭─────╮     ╭─────╮       │
+  │  │  ♦  │     │  ♦  │       │
+  │  ╰─────╯     ╰─────╯       │
+  │    o  o        o  o        │
+  │   / \\/ \\      / \\/ \\       │
+  └────────────────────────────┘`,
+
+BG_CITY_WALK:
+`     │  /\\  │        │  /\\  │
+     │ /\\/\\ │        │ /\\/\\ │
+     │  ||  │        │  ||  │
+  ───┴──┴┴──┴────────┴──┴┴──┴───
+  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+     o       o
+    /|\\     /|\\
+  ──────────────────────────────`,
+
+BG_ARCADE:
+`  ┌───────────────────────────────┐
+  │  ┌────┐ ┌────┐ ┌────┐ ┌────┐  │
+  │  │▓▓▓▓│ │░░░░│ │▒▒▒▒│ │▓▓▓▓│  │
+  │  │▓▓▓▓│ │░░░░│ │▒▒▒▒│ │▓▓▓▓│  │
+  │  └┬──┬┘ └┬──┬┘ └┬──┬┘ └┬──┬┘  │
+  │   │  │   │  │   │  │   │  │   │
+  │   *  *   *  *   *  *   *  *   │
+  │      o        o               │
+  │     /|\\      /|\\              │
+  └───────────────────────────────┘`,
+
+BG_APARTMENT_LIVING_ROOM:
+`  ┌─────────────────────────────┐
+  │                             │
+  │   ┌──┐  ┌───────┐           │
+  │   │☺☺│  │ books │  ╭─╮      │
+  │   └──┘  │ books │  │♦│      │
+  │         └───────┘  ╰─╯      │
+  │                             │
+  │    ▒  c o u c h  ▒   ▒▓▒    │
+  │    ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   mug    │
+  └─────────────────────────────┘`,
+
+BG_BEACH_AFTERNOON:
+`
+              ·  ·  ·
+        ~            ~        ~
+  ~~─────~~─────~~─────~~──────
+  ─~~──────~~────~~─────~~─────
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░   o   ░░░░░░░░░░░░░░
+  ░░░░░░░░  /|\\  ░░░░░░░░░░░░░░
+  ░░░░░░░░ /   \\ ░░░░░░░░░░░░░░`
+
+};
+
+// ════════════════════════════════════════
+//  SVG Character Poses (Wireframe)
+// ════════════════════════════════════════
+
+function characterSVG(expression, postTransition) {
+  const c = "#33ff33";
+  const w = 2;
+  let eyes, mouth, extras = '', armL, armR, legs;
+
+  // Hair: short pre-transition, shoulder-length post-transition
+  const hair = postTransition
+    ? `<path d="M 34 16 Q 28 25 28 40 Q 28 55 33 68" fill="none" stroke="${c}" stroke-width="1.5"/>
+       <path d="M 66 16 Q 72 25 72 40 Q 72 55 67 68" fill="none" stroke="${c}" stroke-width="1.5"/>
+       <path d="M 38 13 Q 32 15 30 22" fill="none" stroke="${c}" stroke-width="1.5"/>
+       <path d="M 62 13 Q 68 15 70 22" fill="none" stroke="${c}" stroke-width="1.5"/>`
+    : `<polyline points="36,15 38,10 42,13" fill="none" stroke="${c}" stroke-width="1.5"/>
+       <polyline points="46,12 50,8 54,12" fill="none" stroke="${c}" stroke-width="1.5"/>
+       <polyline points="58,13 62,10 64,15" fill="none" stroke="${c}" stroke-width="1.5"/>`;
+
+  armL = `<line x1="50" y1="72" x2="28" y2="96" stroke="${c}" stroke-width="${w}"/>`;
+  armR = `<line x1="50" y1="72" x2="72" y2="96" stroke="${c}" stroke-width="${w}"/>`;
+  legs = `<line x1="50" y1="105" x2="35" y2="148" stroke="${c}" stroke-width="${w}"/>
+    <line x1="50" y1="105" x2="65" y2="148" stroke="${c}" stroke-width="${w}"/>`;
+
+  const expr = (expression || '').toLowerCase();
+
+  if (expr.includes('shy')) {
+    // Eyes glancing down-left, averted gaze
+    eyes = `<circle cx="38" cy="32" r="2" fill="${c}"/><circle cx="57" cy="32" r="2" fill="${c}"/>`;
+    // Small tentative smile
+    mouth = `<path d="M 44 41 Q 50 44 56 41" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    // Blush marks on cheeks (small X-shaped hatch lines)
+    extras = `<line x1="29" y1="34" x2="33" y2="36" stroke="${c}" stroke-width="1" opacity="0.5"/>
+      <line x1="29" y1="36" x2="33" y2="34" stroke="${c}" stroke-width="1" opacity="0.5"/>
+      <line x1="67" y1="34" x2="71" y2="36" stroke="${c}" stroke-width="1" opacity="0.5"/>
+      <line x1="67" y1="36" x2="71" y2="34" stroke="${c}" stroke-width="1" opacity="0.5"/>`;
+    // Left arm crosses body to hold right upper arm (self-comfort gesture)
+    armL = `<polyline points="50,72 40,82 58,84" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    // Right arm hangs but slightly turned inward
+    armR = `<polyline points="50,72 62,84 60,96" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    // Feet closer together — closed, modest stance
+    legs = `<line x1="50" y1="105" x2="42" y2="148" stroke="${c}" stroke-width="${w}"/>
+      <line x1="50" y1="105" x2="58" y2="148" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('smile') || expr.includes('soft') || expr.includes('polite') || expr.includes('small_smile')) {
+    eyes = `<circle cx="40" cy="30" r="2.5" fill="${c}"/><circle cx="60" cy="30" r="2.5" fill="${c}"/>`;
+    mouth = `<path d="M 40 40 Q 50 48 60 40" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('awkward')) {
+    eyes = `<circle cx="40" cy="30" r="2.5" fill="${c}"/><circle cx="60" cy="30" r="2" fill="${c}"/>`;
+    mouth = `<path d="M 40 42 Q 48 38 56 42 Q 58 44 60 42" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('nervous')) {
+    eyes = `<circle cx="40" cy="30" r="3" fill="${c}"/><circle cx="60" cy="30" r="3" fill="${c}"/>`;
+    mouth = `<path d="M 39 41 Q 44 44 49 41 Q 54 44 59 41" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('thoughtful') || expr.includes('curious')) {
+    eyes = `<circle cx="40" cy="30" r="2.5" fill="${c}"/><circle cx="60" cy="29" r="2.5" fill="${c}"/>`;
+    mouth = `<circle cx="50" cy="42" r="2" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    extras = `<line x1="35" y1="22" x2="45" y2="24" stroke="${c}" stroke-width="1.5"/>`;
+    armR = `<polyline points="50,72 65,82 60,65" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('vulnerable') || expr.includes('sad')) {
+    eyes = `<circle cx="40" cy="31" r="2" fill="${c}"/><circle cx="60" cy="31" r="2" fill="${c}"/>`;
+    mouth = `<path d="M 42 44 Q 50 40 58 44" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    armL = `<line x1="50" y1="72" x2="35" y2="90" stroke="${c}" stroke-width="${w}"/>`;
+    armR = `<line x1="50" y1="72" x2="65" y2="90" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('distress')) {
+    eyes = `<circle cx="40" cy="29" r="3.5" fill="${c}"/><circle cx="60" cy="29" r="3.5" fill="${c}"/>`;
+    mouth = `<ellipse cx="50" cy="43" rx="5" ry="4" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    extras = `<line x1="33" y1="22" x2="42" y2="25" stroke="${c}" stroke-width="1.5"/><line x1="67" y1="22" x2="58" y2="25" stroke="${c}" stroke-width="1.5"/>`;
+    armL = `<line x1="50" y1="72" x2="25" y2="60" stroke="${c}" stroke-width="${w}"/>`;
+    armR = `<line x1="50" y1="72" x2="75" y2="60" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('reserved') || expr.includes('calm')) {
+    eyes = `<line x1="37" y1="30" x2="43" y2="30" stroke="${c}" stroke-width="${w}"/><line x1="57" y1="30" x2="63" y2="30" stroke="${c}" stroke-width="${w}"/>`;
+    mouth = `<line x1="44" y1="42" x2="56" y2="42" stroke="${c}" stroke-width="${w}"/>`;
+    armL = `<polyline points="50,72 38,80 50,85" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    armR = `<polyline points="50,72 62,80 50,85" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('tired') || expr.includes('focus')) {
+    eyes = `<line x1="37" y1="30" x2="43" y2="31" stroke="${c}" stroke-width="${w}"/><line x1="57" y1="30" x2="63" y2="31" stroke="${c}" stroke-width="${w}"/>`;
+    mouth = `<line x1="43" y1="42" x2="57" y2="41" stroke="${c}" stroke-width="${w}"/>`;
+  } else if (expr.includes('relaxed')) {
+    eyes = `<circle cx="40" cy="30" r="2" fill="${c}"/><circle cx="60" cy="30" r="2" fill="${c}"/>`;
+    mouth = `<path d="M 42 41 Q 50 45 58 41" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+    armL = `<line x1="50" y1="72" x2="30" y2="88" stroke="${c}" stroke-width="${w}"/>`;
+    armR = `<line x1="50" y1="72" x2="70" y2="88" stroke="${c}" stroke-width="${w}"/>`;
+  } else {
+    eyes = `<circle cx="40" cy="30" r="2.5" fill="${c}"/><circle cx="60" cy="30" r="2.5" fill="${c}"/>`;
+    mouth = `<line x1="42" y1="42" x2="58" y2="42" stroke="${c}" stroke-width="${w}"/>`;
+  }
+
+  currentMouthClosed = mouth;
+  currentMouthOpen = `<ellipse cx="50" cy="42" rx="4" ry="3.5" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+
+  return `<svg viewBox="0 0 100 160" width="60" height="120" xmlns="http://www.w3.org/2000/svg">
+    ${hair}
+    <circle cx="50" cy="30" r="18" fill="none" stroke="${c}" stroke-width="${w}"/>
+    ${eyes}<g id="charMouth">${mouth}</g>${extras}
+    <line x1="50" y1="48" x2="50" y2="105" stroke="${c}" stroke-width="${w}"/>
+    ${armL}${armR}
+    ${legs}
+  </svg>`;
+}
+
+// ════════════════════════════════════════
+//  STORY DATA (Expanded)
+// ════════════════════════════════════════
+
+const EmbeddedScript = {
+  meta: {
+    project: "TIMELINK",
+    format_version: "1.0",
+    stats: {
+      I: { name: "Interest", start: 0 },
+      R: { name: "Respect", start: 0 },
+      B: { name: "Bond", start: 0 }
+    },
+    cast: {
+      characters: [
+        {
+          char_id: "MC",
+          internal_name: "Me",
+          name_discovery: { fallback: "…" },
+          forms: [
+            {
+              form_id: "MC_PRE",
+              label_unknown: "Vendor",
+              discovery_flag: "knows_mc_pre_name",
+              pronouns: { subject: "they", object: "them", possessive: "their", reflexive: "themselves" },
+              label_known: "Dan",
+              label: "Pre-transition",
+              poses: [
+                { pose_id: "ME_POSE_BOOTH_STAND_NEUTRAL", name: "Standing behind booth (neutral)" },
+                { pose_id: "ME_POSE_BOOTH_STAND_RELAXED", name: "Standing behind booth (relaxed)" },
+                { pose_id: "ME_POSE_BOOTH_LEAN_SLIGHT", name: "Leaning slightly on table" }
+              ],
+              expressions: [
+                { expr_id: "ME_EXPR_NEUTRAL", name: "Neutral" },
+                { expr_id: "ME_EXPR_SLIGHT_SMILE", name: "Slight smile" },
+                { expr_id: "ME_EXPR_TIRED_FOCUS", name: "Tired focus" },
+                { expr_id: "ME_EXPR_AWKWARD_SMILE", name: "Awkward smile" },
+                { expr_id: "ME_EXPR_THOUGHTFUL", name: "Thoughtful" },
+                { expr_id: "ME_EXPR_SOFT_SMILE", name: "Soft smile" }
+              ]
+            },
+            {
+              form_id: "MC_POST",
+              label_unknown: "New Hire",
+              discovery_flag: "knows_mc_post_name",
+              pronouns: { subject: "she", object: "her", possessive: "her", reflexive: "herself" },
+              label_known: "Amy",
+              label: "Post-transition",
+              poses: [
+                { pose_id: "ME_POSE_STAND_BADGE", name: "Standing with badge or laptop" },
+                { pose_id: "ME_POSE_STAND_RELAXED", name: "Standing, relaxed posture" },
+                { pose_id: "ME_POSE_SIT_DATE", name: "Sitting across from player" },
+                { pose_id: "ME_POSE_STAND_WALK", name: "Walking side by side" },
+                { pose_id: "ME_POSE_STAND_ARCADE", name: "Standing near arcade machine" },
+                { pose_id: "ME_POSE_SIT_SOFA", name: "Sitting on sofa" },
+                { pose_id: "ME_POSE_SWIM", name: "Swimming" },
+                { pose_id: "ME_POSE_SHY_STAND", name: "Standing shyly" }
+              ],
+              expressions: [
+                { expr_id: "ME_EXPR_NEUTRAL", name: "Neutral" },
+                { expr_id: "ME_EXPR_POLITE_SMILE", name: "Polite smile" },
+                { expr_id: "ME_EXPR_RESERVED", name: "Reserved" },
+                { expr_id: "ME_EXPR_SMALL_SMILE", name: "Small smile" },
+                { expr_id: "ME_EXPR_VULNERABLE", name: "Vulnerable" },
+                { expr_id: "ME_EXPR_CURIOUS", name: "Curious" },
+                { expr_id: "ME_EXPR_RELAXED", name: "Relaxed" },
+                { expr_id: "ME_EXPR_CALM", name: "Calm" },
+                { expr_id: "ME_EXPR_HURT", name: "Hurt" },
+                { expr_id: "ME_EXPR_DISTRESS", name: "Distress" },
+                { expr_id: "ME_EXPR_NERVOUS_SMILE", name: "Nervous smile" },
+                { expr_id: "ME_EXPR_SHY", name: "Shy" }
+              ]
+            }
+          ]
+        }
+      ]
+    }          
+  },
+  days: [
+    {
+      day_id: "D1", day_index: 1, act: "ACT I",
+      title: "Indie Convention Booth (First Encounter)",
+      setting: { time_period: "2003", location: "Videogame convention hall", tone_tags: ["brief","awkward","sincere","professional"] },
+      assets: {
+        backgrounds: [{ bg_id: "BG_CONVENTION_HALL_DAY", name: "Convention Hall (Day)", description: "Large hall, folding tables, banners, crowd blur, ambient noise." }],
+      },
+      cast_default: [{ char_id: "MC", form_id: "MC_PRE", pose_id: "ME_POSE_BOOTH_STAND_NEUTRAL", default_expression: "ME_EXPR_NEUTRAL" }],
+      scenes: [{
+        scene_id: "D1_S1_BOOTH_INTRO",
+        background: "BG_CONVENTION_HALL_DAY",
+        narration: "The retrogaming convention floor hums with noise and body heat and the sharp chemical tang of energy drinks. Folding tables line the aisles in uneven rows, hand-printed signs taped to the front with blue painter's tape. Most booths sell vintage cartridges or modded consoles—but tucked in the corner, between a stack of zines and an empty chair—one booth catches your eye. A single person behind a small table, a brand-new ColecoVision cartridge on display. Not vintage. New. Homebrew. The label is hand-drawn. They're not calling out to anyone. Not making eye contact. Just sitting there with a soldering iron burn on one thumb, quietly waiting for someone to notice.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "Oh. Hi." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "..." },
+          { speaker: "SYSTEM", expression: "", text: "They glance at you, then back at the\ncartridge on the table. They don't\ntry to sell it. Doesn't pitch.\nJust waits." },
+          { speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "It's a new game. For the ColecoVision.\nHomebrew. Real cartridge, real hardware." },
+          { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "There's maybe… three of us?\nActively making new original games\nfor this thing." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Most people walk right past.\nThey're here for vintage stuff." }
+        ],
+        choices: [
+          {
+            player_text: "When did you make this? How?",
+            effects: { stats_delta: { I: 1, R: 1, B: 0 }, flags_set: ["asked_about_mechanics"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "Oh—you actually want to know?" },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Everything. I do everything.\nCode, graphics, sounds, level design.\nHad to build my own tools first—\nno documentation for this hardware." },
+              { speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "The cartridges too. I recycle old ones,\nreplace the boards, burn the chips,\nprint the labels on photo paper.\nAll by hand." },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "If there's space left in memory…\nI hide an easter egg. A full moon\nin a night scene. All my games have one.\nNights are less scary when you can see." },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "I lose money on every single one.\nBut when I was a kid I dreamed about\nmaking games for this console.\nSo… here I am. Still doing it." }
+            ]
+          },
+          {
+            player_text: "I'll take one.",
+            effects: { stats_delta: { I: 0, R: 1, B: 0 }, flags_set: ["bought_quietly"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "Oh—" },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "You don't have to— I mean. Thank you.\nSeriously." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I hope it's worth your time.\nI really do." },
+              { speaker: "SYSTEM", expression: "", reveal_name: true, text: "You notice on the cartridge label:\nMade by Dan." }
+            ]
+          },
+          {
+            player_text: "You should try saying hello to people passing by.",
+            effects: { stats_delta: { I: 0, R: 0, B: 1 }, flags_set: ["suggested_greeting"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "..." },
+              { speaker: "MC", expression: "ME_EXPR_AWKWARD_SMILE", text: "Like… just… hello?\nHow you doing today?\nThat kind of thing?" },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I don't know. That's…\nI'm not really that kind of person." },
+              { speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "But… maybe. I'll try.\nCan't be worse than sitting here\nin silence all day." }
+            ]
+          }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D2", day_index: 2, act: "ACT I",
+      title: "Same Convention, Later That Day",
+      setting: { time_period: "Same day, later hours", location: "Videogame convention hall", tone_tags: ["awkward","familiar","low_stakes"] },
+      assets: { backgrounds: [{ bg_id: "BG_CONVENTION_HALL_EVENING", name: "Convention Hall (Evening)", description: "Same hall, dimmer lighting, fewer visitors, end-of-day fatigue." }] },
+      scenes: [{
+        scene_id: "D2_S1_BOOTH_RETURN",
+        background: "BG_CONVENTION_HALL_EVENING",
+        cast: [{ char_id: "MC", form_id: "MC_PRE", pose_id: "ME_POSE_BOOTH_STAND_RELAXED", default_expression: "ME_EXPR_NEUTRAL" }],
+        narration: "The convention is winding down. Half the booths are already packed up—cardboard boxes, tangled cables, the deflated remains of someone's balloon display. The air smells like carpet cleaner and cold pizza and something vaguely electric. The crowd has thinned to a handful of stragglers. You're not sure why you came back. You just… did. The same table is still set up in the corner. They're packing slowly, like they're not in a hurry to leave.",
+        dialogue: [
+          { flag: "suggested_greeting", speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "Hello! How you doing today?" },
+          { flag: "suggested_greeting", speaker: "SYSTEM", expression: "", text: "They say it like they've been practicing.\nA little too bright, a little rehearsed.\nBut they said it. And they're smiling." },
+          { flag: "!suggested_greeting", speaker: "MC", expression: "ME_EXPR_AWKWARD_SMILE", text: "Oh. Hey." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "You stopped by earlier, right?\nSorry—everything's blurring together." },
+          { flag: "suggested_greeting", speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "Sold two more than usual.\nWhich is… two. But still." },
+          { flag: "!suggested_greeting", speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "Barely sold anything. But a couple\npeople actually played it. Which is\ndifferent." }
+        ],
+        choices: [
+          {
+            player_text: "Yeah. I wanted another look at it.",
+            effects: { stats_delta: { I: 1, R: 1, B: 1 }, flags_set: ["acknowledged_return"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Oh." },
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "That's… huh. You actually came back.\nPeople don't usually do that." },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "It's been a really long day, but…\nyeah. That's actually really nice to hear.\nThank you." }
+            ]
+          },
+          {
+            player_text: "No, must have been someone else.",
+            effects: { stats_delta: { I: 0, R: -1, B: -1 }, flags_set: ["denied_return"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Ah. Yeah. Happens a lot here.\nEveryone kind of… blurs together\nafter a while." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Faces, conversations… by hour six\nyou're just running on autopilot." },
+              { speaker: "MC", expression: "ME_EXPR_TIRED_FOCUS", text: "Anyway. Welcome, I guess. Again.\nOr for the first time. Whichever." }
+            ]
+          },
+          {
+            player_text: "Long day, huh? Same here.",
+            effects: { stats_delta: { I: 1, R: 0, B: 1 }, flags_set: ["made_small_joke"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_AWKWARD_SMILE", text: "Yeah. Feet hurt, voice is gone,\nI think I've had four cups of coffee\nand nothing else since breakfast." },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "But it's a good problem to have.\nBetter than an empty table, right?" },
+              { speaker: "MC", expression: "ME_EXPR_SLIGHT_SMILE", text: "At least someone's here at the end.\nThat counts for something." }
+            ]
+          }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D3", day_index: 3, act: "ACT I",
+      title: "Different Convention, Different Year",
+      setting: { time_period: "A few years later, before 2008", location: "Smaller videogame convention", tone_tags: ["quiet","reflective","unassuming"] },
+      assets: { backgrounds: [{ bg_id: "BG_SMALL_CONVENTION_HALL", name: "Small Convention Hall", description: "Lower ceiling, fewer tables, softer noise, slower pace." }] },
+      scenes: [{
+        scene_id: "D3_S1_QUIET_BOOTH",
+        background: "BG_SMALL_CONVENTION_HALL",
+        cast: [{ char_id: "MC", form_id: "MC_PRE", pose_id: "ME_POSE_BOOTH_LEAN_SLIGHT", default_expression: "ME_EXPR_NEUTRAL" }],
+        narration: "A different year. A retrogaming convention in a city with famous stone steps—the kind you've seen in movies, where someone runs to the top with their fists in the air. The venue is smaller: folding chairs, fluorescent lights that hum at a frequency you can feel in your teeth, industrial carpet that smells like dust and someone's microwaved lunch. You almost don't recognize the booth—it's better this time, a real printed banner, two cartridges displayed under a small desk lamp instead of one—but the handwriting on the price cards is the same. Careful, slightly slanted to the left. The person behind the table looks… different, somehow. Not just older. More settled. Like something heavy shifted and found a place to rest.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "This one's the sequel, actually.\nMore refined. Better sprite work.\nI learned a lot from the first one." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Some people online called the first one\nchoppy. Which… stung. But the homebrew\npeople appreciated it. They know how rare\nit is to make something new for\nhardware this old." },
+          { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "The full moon's still in there, by the\nway. Same easter egg. Every game I make\nhas one. It's… my thing." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Different shows, different cities.\nI've been at this a while now.\nCustom tools, patience, stubbornness." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "…Do I know you from somewhere?\nSorry—I get that a lot. Or I say that\na lot. I can't tell anymore." }
+        ],
+        choices: [
+          {
+            player_text: "Just listen and nod quietly.",
+            effects: { stats_delta: { I: 1, R: 1, B: 1 }, flags_set: ["listened_quietly"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Yeah… I guess you never know\nwhat sticks with people." },
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "I think about that sometimes.\nThe people who stopped and played.\nWhether any of them remember it." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Sorry. I'm not great at small talk.\nBut… thanks for being here.\nIt's a quieter show and I was starting\nto talk to myself." }
+            ]
+          },
+          {
+            flag: "bought_quietly",
+            player_text: "I think I bought one of your games once.",
+            effects: { stats_delta: { I: 2, R: 1, B: 2 }, flags_set: ["acknowledged_memory"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Oh.\n…Huh." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "That's… actually really nice to hear.\nI don't keep track of faces well, but…\nsome things feel familiar, you know?" },
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Like a shape you can't quite place.\nNot the details—just the feeling\nthat you've been in this exact moment\nbefore." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Anyway. Welcome back.\nIf that's what this is." }
+            ]
+          },
+          {
+            flag: "!bought_quietly",
+            player_text: "I think I've seen your booth before.",
+            effects: { stats_delta: { I: 1, R: 1, B: 1 }, flags_set: ["acknowledged_memory"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Yeah? Could be.\nI've been at a few of these." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Faces blend together after a while.\nBut some things feel familiar, you know?\nLike a shape you can't quite place." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Anyway. Glad you stopped by.\nIt's a quieter show today." }
+            ]
+          },
+          {
+            flag: "!bought_quietly",
+            player_text: "I'll take the sequel.",
+            effects: { stats_delta: { I: 1, R: 1, B: 1 }, flags_set: ["bought_quietly"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Wait— really?" },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "That's… two sales today.\nWhich is a record for this show." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Thank you. I mean it.\nEvery cartridge I sell means someone\nout there cares about the same weird\nthing I do." },
+              { speaker: "SYSTEM", expression: "", reveal_name: true, text: "You notice on the cartridge label:\nMade by Dan." }
+            ]
+          }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D4", day_index: 4, act: "ACT II",
+      title: "First Day at the Same Company",
+      setting: { time_period: "Years later", location: "Office hallway", tone_tags: ["professional","calm","grounded"] },
+      assets: { backgrounds: [{ bg_id: "BG_OFFICE_HALLWAY", name: "Office Hallway", description: "Neutral hallway with meeting rooms and glass walls." }] },
+      scenes: [{
+        scene_id: "D4_S1_FIRST_MEETING",
+        background: "BG_OFFICE_HALLWAY",
+        cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_STAND_BADGE", default_expression: "ME_EXPR_NEUTRAL" }],
+        narration: "Your first week at the new company. The hallways all look the same—glass walls, meeting room names you'll never remember (is 'Voyager' on the second floor or the third?), the hum of central air conditioning that never quite settles into background noise. Your badge still feels foreign around your neck, the lanyard scratching at your collar. You turn a corner too fast and nearly collide with someone carrying a laptop and a look of mild panic.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_POLITE_SMILE", text: "Oh—sorry. Hi." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", reveal_name: true, text: "I'm Amy. Just started.\nCore tooling team." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "…Wait." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "No, nevermind. You just look familiar.\nSorry." }
+        ],
+        choices: [
+          {
+            player_text: "Welcome! Let me know if you need anything.",
+            effects: { stats_delta: { I: 1, R: 1, B: 1 }, flags_set: ["warm_welcome"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_POLITE_SMILE", text: "Thanks. I appreciate that." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Everyone's been nice so far. That\ncorporate nice, you know? The kind that\ncomes with a Slack emoji and nothing else." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "But you actually seem like you mean it.\nWhich is… nice. The real kind." }
+            ]
+          },
+          {
+            player_text: "Core tooling? That's a solid group.",
+            effects: { stats_delta: { I: 0, R: 1, B: 0 }, flags_set: ["professional_interest"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Yeah, mostly legacy support.\nThe stuff that keeps the lights on but\nnobody writes blog posts about." },
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "It's not glamorous, but… I like systems.\nFiguring out how things hold together.\nOr why they don't." },
+              { speaker: "MC", expression: "ME_EXPR_POLITE_SMILE", text: "Before this I was doing… something\nvery different. But that's a long story." }
+            ]
+          },
+          {
+            player_text: "First days are always chaos, huh?",
+            effects: { stats_delta: { I: 1, R: -1, B: 0 }, flags_set: ["awkward_joke"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "Yeah… depends on the place." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I've had first days that were worse.\nI'll probably just keep my head down\nfor a while. Figure things out." },
+              { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "I'm good at being invisible when I\nneed to be. It's a skill." }
+            ]
+          }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D5", day_index: 5, act: "ACT II",
+      title: "Familiarity Builds",
+      setting: { time_period: "A few weeks later", location: "Office break area", tone_tags: ["casual","observational","warming"] },
+      assets: { backgrounds: [{ bg_id: "BG_OFFICE_BREAK_AREA", name: "Office Break Area", description: "Coffee machine, small tables, soft ambient chatter." }] },
+      scenes: [{
+        scene_id: "D5_S1_BREAK_CHAT",
+        background: "BG_OFFICE_BREAK_AREA",
+        cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_STAND_RELAXED", default_expression: "ME_EXPR_NEUTRAL" }],
+        narration: "Three weeks in. You keep running into each other at the coffee machine—not on purpose, but not entirely by accident either. Today the break area is empty except for the two of you. The fluorescent lights buzz their one-note song. The coffee machine gurgles and spits something that might generously be called coffee. She's standing by the window, holding her mug with both hands like she's warming herself, even though it's not cold.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "This place is… quieter than I expected." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Not bad quiet. Just… different.\nLike the volume got turned down on\neverything at once." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "I used to be around noise all the time.\nRetrogaming shows. Convention floors\nwhere you had to lean in just to hear\nsomeone over the CRT static." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I spent years like that.\nTable to table, city to city.\nLiving out of a bag with a soldering iron\nand a box of ColecoVision cartridges." },
+          { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "Sometimes I miss it.\nThe chaos. Having something to show people.\nSomething I built from nothing for\nhardware nobody else cared about." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Here it's just code reviews and stand-ups.\nIt's stable. But stable isn't always\nthe same as alive." }
+        ],
+        choices: [
+          {
+            player_text: "You've done conventions?",
+            effects: { stats_delta: { I: 2, R: 1, B: 2 }, flags_set: ["asked_about_past_work"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Yeah. Retrogaming stuff. Homebrew.\nI was one of the few people making\nnew games for the ColecoVision.\nOriginal titles, not ports." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "After 2005 more people joined in.\nBut most just ported commercial games\nfrom other systems. The scene got\nflooded with ports, and people drifted\ntoward those instead of original work." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "It killed my passion. Slowly.\nA little harder to start each year.\nA little easier to stop.\nI quit going around 2013." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "I was alone for a long time after that.\nReally alone. The kind where you stop\nnoticing the silence." },
+              { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "Then I… changed. Some things about myself.\nAnd life got better. I got better." }
+            ]
+          },
+          {
+            player_text: "I miss noisy places sometimes, too.",
+            effects: { stats_delta: { I: 1, R: 0, B: 1 }, flags_set: ["shared_personal_note"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "Yeah?" },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Noise can be comforting when it's\nthe right kind. When you choose it.\nWhen it's not… aimed at you." },
+              { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "It's nice that you get that.\nMost people look at me weird when\nI say I miss being overwhelmed." }
+            ]
+          },
+          {
+            player_text: "I barely notice the noise anymore.",
+            effects: { stats_delta: { I: 0, R: 0, B: 0 }, flags_set: ["changed_subject"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Yeah. I guess you get used to it." },
+              { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "Or you stop noticing what's missing.\nSame thing, maybe." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Anyway. This coffee is terrible.\nThat's the one constant in every\noffice I've ever been in." }
+            ]
+          }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D6", day_index: 6, act: "ACT III",
+      title: "First Date",
+      requirements: { unlock_conditions: [{ stat: "B", operator: ">=", value: 2, failure_result: "Not enough bond—the date doesn't happen." }] },
+      assets: { backgrounds: [
+        { bg_id: "BG_RESTAURANT_CASUAL", name: "Casual Restaurant", description: "Small tables, warm lighting, low ambient noise." },
+        { bg_id: "BG_CITY_WALK", name: "City Walk", description: "Sidewalks, trees, passing people, open air." },
+        { bg_id: "BG_ARCADE", name: "Arcade", description: "Retro machines, blinking lights, background sounds." }
+      ]},
+      scenes: [
+        {
+          scene_id: "D6_S1_DATE_SELECTION",
+          type: "branch_select",
+          background: "BG_OFFICE_BREAK_AREA",
+          narration: "She mentioned wanting to do something outside of work. Not in those words—she said something about how the break room coffee was going to kill her eventually, and you said 'we should get real coffee sometime,' and the whole room went quiet for exactly two seconds. She looked at you. Then down at her mug. Then back at you. 'Okay,' she said. Like she was surprising herself. Like the word escaped before she could catch it.",
+          prompt: "Where do you suggest going for the first date?",
+          dialogue: [{ speaker: "SYSTEM", expression: "", text: "Where do you suggest going?" }],
+          choices: [
+            { player_text: "A small restaurant downtown", effects: { vars_set: { D6_location: "RESTAURANT" } }, next_scene: "D6_S2_RESTAURANT" },
+            { player_text: "A walk through the city", effects: { vars_set: { D6_location: "WALK" } }, next_scene: "D6_S2_WALK" },
+            { player_text: "That old arcade on 5th", effects: { vars_set: { D6_location: "ARCADE" } }, next_scene: "D6_S2_ARCADE" }
+          ]
+        },
+        {
+          scene_id: "D6_S2_RESTAURANT",
+          branch_only: true,
+          background: "BG_RESTAURANT_CASUAL",
+          cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_SIT_DATE", default_expression: "ME_EXPR_NERVOUS_SMILE" }],
+          narration: "A small place downtown. The lighting is warm—not romantic warm, just warm, the kind that makes everyone look a little softer. The menu is handwritten on a chalkboard, the tables are close together but nobody seems to mind. She's sitting across from you, hands wrapped around a glass of water, rotating it slowly. She hasn't looked at the menu yet.",
+          dialogue: [
+            { speaker: "MC", expression: "ME_EXPR_NERVOUS_SMILE", text: "I like this. Public places." },
+            { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "It's a safety thing. I just need to\nknow the exit is right there." },
+            { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "That probably sounds paranoid.\nOr sad." },
+            { speaker: "MC", expression: "ME_EXPR_SHY", text: "…Sorry. I don't know why I said that\non a first date." }
+          ],
+          choices: [
+            { player_text: "That makes sense. I'm glad you feel safe here.",
+              effects: { stats_delta: { R: 2, B: 2 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_SHY", text: "Thanks for… not making it weird." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Most people either get defensive—like\nI'm accusing them—or they try too hard\nto reassure me. Which is somehow worse." },
+                { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "You just… heard it. And that was enough.\nI don't know how to tell you what\nthat means to me." }
+              ] },
+            { player_text: "Don't worry, I'm not dangerous.",
+              effects: { stats_delta: { R: -1, B: 1 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "…Yeah. That's what everyone says." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Sorry. I didn't mean—\nThat came out sharper than I wanted." },
+                { speaker: "MC", expression: "ME_EXPR_NERVOUS_SMILE", text: "Let's just… look at the menu.\nI hear the pasta's good." }
+              ] },
+            { player_text: "Why is that?",
+              effects: { stats_delta: { R: 0, B: 0 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Experience, mostly." },
+                { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "The kind you don't get to choose." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I'd rather not get into it right now.\nNot here. Not yet.\nIs that okay?" }
+              ] }
+          ]
+        },
+        {
+          scene_id: "D6_S2_WALK",
+          branch_only: true,
+          background: "BG_CITY_WALK",
+          cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_STAND_WALK", default_expression: "ME_EXPR_RELAXED" }],
+          narration: "The evening air is cool and smells like wet leaves and distant takeout. Streetlights flicker on one by one as you walk side by side—not touching, but close enough to feel the warmth. No destination in mind. No agenda. Just movement, and the sound of your footsteps on the sidewalk finding a rhythm neither of you planned.",
+          dialogue: [
+            { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "This is easier than sitting across\na table." },
+            { speaker: "SYSTEM", expression: "", text: "She doesn't explain why.\nShe just walks. Hands in pockets.\nMatching your pace without trying." },
+            { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "You don't seem like you're in a hurry\nto fill the silence." },
+            { speaker: "MC", expression: "ME_EXPR_SHY", text: "…Is that weird? That I notice that?" }
+          ],
+          choices: [
+            { player_text: "No. Yeah, no pressure. This is nice.",
+              effects: { stats_delta: { R: 2, B: 2 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "It is, isn't it?" },
+                { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "I can't remember the last time I\njust… walked with someone.\nWithout a destination or a deadline\nor a reason to explain myself." },
+                { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "This is just… nice.\nI forgot that was allowed." }
+              ] },
+            { player_text: "Silence is kind of awkward, though.",
+              effects: { stats_delta: { R: -1, B: 0 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "…Yeah, I guess." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I'm used to silence being comfortable.\nBut I get that not everyone is." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "We can talk. I just… might not be\ngreat at it tonight. Fair warning." }
+              ] },
+            { player_text: "I like this. Just walking.",
+              effects: { stats_delta: { R: 1, B: 1 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "Good." },
+                { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "Let's keep going, then.\nI don't want to be anywhere else\nright now." }
+              ] }
+          ]
+        },
+        {
+          scene_id: "D6_S2_ARCADE",
+          branch_only: true,
+          background: "BG_ARCADE",
+          cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_STAND_ARCADE", default_expression: "ME_EXPR_CURIOUS" }],
+          narration: "The arcade is half-empty, which is to say it's perfect. Old machines line the walls, their screens casting blue and pink and acid-green light across the worn carpet. The air smells like ozone and stale popcorn. Something about the sound—the bleeps, the mechanical clunks, the tinny attract-screen music looping—fills a shape you forgot was empty. She walked in and went quiet. Not frozen—just… absorbing. She drifted past the popular cabinets without looking at them and stopped in front of a machine in the back corner. The one nobody was playing.",
+          dialogue: [
+            { speaker: "MC", expression: "ME_EXPR_CURIOUS", text: "I haven't been to one of these in years.\nGod. This one's from '86." },
+            { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I used to come to places like this when\nI needed to disappear. Find the one\ncabinet in the back that nobody was using." },
+            { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "I was never good at them.\nI just… liked being inside them.\nThe worlds. Like interactive cartoons." },
+            { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "I used to care about the scores.\nNow I just… want to be here.\nThe lights. The sounds. The moment.\nThat's all it needs to be." }
+          ],
+          choices: [
+            { player_text: "We can just play. No talking required.",
+              effects: { stats_delta: { R: 1, B: 2 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Yeah. I'd like that.\nMore than you know, actually." },
+                { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "I'll probably be terrible. I was never\nthe person who could clear a stage\non one credit." },
+                { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "But that was never really the point\nfor me." }
+              ] },
+            { player_text: "Are you any good at these?",
+              effects: { stats_delta: { R: 1, B: 1 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_SMALL_SMILE", text: "Honestly? No." },
+                { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "I used to care about that. Spent years\nfrustrated that my hands couldn't do\nwhat my brain wanted." },
+                { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Now I just… enjoy being in the world.\nThe scores don't matter.\nThe moment does." }
+              ] },
+            { player_text: "You don't seem like the arcade type.",
+              effects: { stats_delta: { R: -1, B: 0 } },
+              response: [
+                { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "…What type do I seem like?" },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "People say that a lot. Like there's\na checklist for who's allowed to\nenjoy things." },
+                { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "Never mind. Let's just find a cabinet\nin the corner." }
+              ] }
+          ]
+        }
+      ]
+    },
+
+    {
+      day_id: "D7", day_index: 7, act: "ACT III",
+      title: "Second Date",
+      requirements: { unlock_conditions: [{ stat: "B", operator: ">=", value: 3, failure_result: "Not enough bond—the second date doesn't happen." }] },
+      assets: { backgrounds: [{ bg_id: "BG_RESTAURANT_CASUAL" }, { bg_id: "BG_CITY_WALK" }, { bg_id: "BG_ARCADE" }] },
+      scenes: [{
+        scene_id: "D7_S1_DATE_REPEAT",
+        type: "contextual_scene",
+        cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_SIT_DATE", default_expression: "ME_EXPR_NERVOUS_SMILE" }],
+        background_from_var: "D6_location",
+        narration: "She texted first this time. Just a simple message: 'Same place?' Three words. You stared at your phone for ten seconds, then typed 'yes' before you could overthink it. She replied with a period. Just a period. You're still not sure if that's a good thing or just how she texts. Now you're here again, and she's already here, and she looks up when you arrive with something that might be relief.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_NERVOUS_SMILE", text: "I don't usually do this twice." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "…" },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "I'm not sure I'm good at this.\nAt being the person who stays." },
+          { speaker: "MC", expression: "ME_EXPR_SHY", text: "But I wanted to see you again.\nSo here I am." }
+        ],
+        choices: [
+          { player_text: "I appreciate you trusting me with that.",
+            effects: { stats_delta: { R: 2, B: 2 }, flags_set: ["acknowledged_trust"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Trust is… something I'm working on.\nIt used to be a wall. Now it's more\nlike a door with a really sticky lock." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "It doesn't come easy. But you make it\nfeel less like a risk and more like…\na choice. A good one." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "I haven't felt that in a long time." }
+            ] },
+          { player_text: "Take your time. No pressure, ever.",
+            effects: { stats_delta: { R: 2, B: 1 }, flags_set: ["respected_pace"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_CALM", text: "You keep saying that.\nAnd I keep waiting for the part where\nyou take it back." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "But you don't.\nAnd I keep believing you.\nThat's new for me." },
+              { speaker: "MC", expression: "ME_EXPR_CALM", text: "New and terrifying and… kind of wonderful." }
+            ] },
+          { player_text: "I think we're past the awkward stage.",
+            effects: { stats_delta: { R: -2, B: 1 }, flags_set: ["pushed_boundary"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_RESERVED", text: "…Maybe you are." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "I'm still catching up.\nThe awkward stage isn't something I\njust… graduate from. It's where I live." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "Can we… not rush this?\nI'm here. That's a lot for me already." }
+            ] }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D8", day_index: 8, act: "ACT IV",
+      title: "At My Place",
+      requirements: { unlock_conditions: [{ stat: "R", operator: ">=", value: 1, failure_result: "Not enough respect—the invitation never comes." }] },
+      assets: { backgrounds: [{ bg_id: "BG_APARTMENT_LIVING_ROOM", name: "Apartment Living Room", description: "Quiet living room, personal items, shelf with a framed photo." }] },
+      scenes: [{
+        scene_id: "D8_S1_PHOTO_DISCOVERY",
+        background: "BG_APARTMENT_LIVING_ROOM",
+        narration: "The apartment is small and lived-in. Books stacked on the floor by the couch—half of them programming textbooks, the other half graphic novels with cracked spines. A laptop open on the desk, screen dimmed to a faint blue glow. A mug of cold coffee on the side table, a ring of dried coffee on the wood beneath it. An old console tucked under the TV, controllers neatly coiled. A succulent on the windowsill that's somehow still alive. It feels personal—like stepping behind a curtain that's usually drawn shut. Like seeing the handwriting in the margins of someone's life.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_SHY", text: "Sorry about the mess." },
+          { speaker: "MC", expression: "ME_EXPR_SHY", text: "There's tea if you want.\nMugs are… mostly clean." },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "It's been a while since I've had\nsomeone over." },
+          { speaker: "SYSTEM", expression: "", text: "You move through the room while she\nmakes tea. Your eyes drift to a shelf\nnear the window. A framed photo, turned\nslightly toward the wall—like it was\nmeant to be hidden, but not removed." },
+          { speaker: "SYSTEM", expression: "", text: "It's clearly from years ago.\nThe person in it looks different—\nyounger, maybe. The hairstyle, the\nclothes, the posture. But the eyes\nare the same. You look at the photo.\nThen at her. Then at the photo again." },
+          { speaker: "SYSTEM", expression: "", text: "The air in the room shifts." }
+        ],
+        choices: [
+          { player_text: "Quietly leave without saying anything.",
+            effects: { ending: "BAD_ENDING_1_ABANDONMENT", stats_set: { B: 0 } } },
+          { player_text: "Say nothing about the photo. Stay.",
+            effects: { stats_delta: { B: 1 }, flags_set: ["secret_seen"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_CALM", text: "You're quiet tonight." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "Everything okay?\nYou've got that look like…\nlike you're deciding something." },
+              { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "…You saw it, didn't you." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "It's okay. I was going to tell you.\nI just… wasn't ready for it\nto be now. Not like this." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "That photo is from before.\nBefore I became… this. Me.\nThe real me." },
+              { speaker: "MC", expression: "ME_EXPR_CALM", text: "I was going to find the right words.\nI had a whole speech. But you're here\nand you're looking at me and I can't\nremember any of it." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "So I'll just say it:\nthat was me. And this is me.\nAnd I need to know if that changes\nanything for you." }
+            ] },
+          { player_text: "Say something about the photo.",
+            effects: { stats_delta: { B: -1 } },
+            next_scene: "D8_S2_CONFRONTATION" }
+        ]
+      },
+      {
+        scene_id: "D8_S2_CONFRONTATION",
+        branch_only: true,
+        background: "BG_APARTMENT_LIVING_ROOM",
+        cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_SIT_SOFA", default_expression: "ME_EXPR_VULNERABLE" }],
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "…You saw the photo." },
+          { speaker: "MC", expression: "ME_EXPR_HURT", text: "I was going to tell you.\nI had a plan. I had words.\nThis wasn't— this isn't how\nit was supposed to go." },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "Please. Can we just…\nCan we talk about this?" }
+        ],
+        choices: [
+          { player_text: "Wait. I know that face.",
+            effects: { stats_delta: { R: 3, B: 3 }, flags_set: ["recognized_past", "secret_seen"] },
+            response: [
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "…What?" },
+              { flag: "bought_quietly", speaker: "SYSTEM", expression: "", text: "You tell her you bought the game.\nThe ColecoVision cartridge, years ago.\nThe one with the full moon hidden in it." },
+              { flag: "!bought_quietly", speaker: "SYSTEM", expression: "", text: "You tell her you remember the booth.\nThe ColecoVision cartridge. The person\nwho made something new for hardware\nnobody else cared about." },
+              { speaker: "SYSTEM", expression: "", text: "You tell her it doesn't matter.\nMan or woman—the person who made\nthat game with that much passion\nhas a pure heart. And deserves\nto be respected. And loved." },
+              { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "You… you remembered.\nNobody remembers. Nobody ever—" },
+              { speaker: "MC", expression: "ME_EXPR_SHY", text: "I was so scared." },
+              { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "But you're still here.\nAnd you remember who I was.\nAnd you're looking at who I am." }
+            ] },
+          { player_text: "Yell and accuse her of lying.",
+            effects: { ending: "BAD_ENDING_3_HEARTBREAK", stats_set: { B: -4 } } },
+          { player_text: "Get aggressive.",
+            effects: { ending: "BAD_ENDING_2_VIOLENCE", stats_set: { B: -5 } } }
+        ]
+      }]
+    },
+
+    {
+      day_id: "D9", day_index: 9, act: "ACT V",
+      title: "The Beach",
+      assets: { backgrounds: [{ bg_id: "BG_BEACH_AFTERNOON", name: "Beach (Afternoon)", description: "Wide shoreline, waves, late afternoon light." }] },
+      scenes: [{
+        scene_id: "D9_S1_DROWNING",
+        background: "BG_BEACH_AFTERNOON",
+        cast: [{ char_id: "MC", form_id: "MC_POST", pose_id: "ME_POSE_SWIM", default_expression: "ME_EXPR_RELAXED" }],
+        narration: "A warm afternoon. The kind where the light turns everything golden and the air tastes like salt and sunscreen. The sand is soft under your feet. She took her shoes off at the boardwalk and fussed with her hair for a moment—pressing it down at the edges, checking it twice—before letting herself smile. A real smile, the kind that reaches her eyes, the kind you've been waiting months to see without any wall behind it.",
+        dialogue: [
+          { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "I forgot what this feels like." },
+          { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "Just… being outside. Being somewhere\nthat isn't a screen or an office or\na convention hall. Just sky and water\nand nothing I have to prove." },
+          { speaker: "MC", expression: "ME_EXPR_THOUGHTFUL", text: "I should tell you something.\nI'm afraid of deep water.\nNot a little afraid. Really afraid." },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "When I was a kid there was a swimming\ncourse at school. The teacher set up\nthis obstacle course in the pool and\ntimed us going through it." },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "My feet got tangled in the rope\nholding the pieces together. Underwater.\nI couldn't get free. I couldn't breathe.\nThe teacher was busy with the other kids\nand his stopwatch." },
+          { speaker: "MC", expression: "ME_EXPR_NEUTRAL", text: "When I finally got through, he just\nlooked at his timer and made a face.\nLike… 'oh, that's slow.' Wrote a number\non a sheet. My safety wasn't the priority.\nMy score was." },
+          { speaker: "MC", expression: "ME_EXPR_VULNERABLE", text: "I never told anyone. I always had\nterrible scores in sports anyway.\nNobody connected the dots that I was\nin actual danger." },
+          { speaker: "MC", expression: "ME_EXPR_CALM", text: "So… yeah. Water and me.\nNot great friends." },
+          { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "But I'm here. And I glued my hair down\nso I won't lose it in the waves.\nWhich is either brave or stupid." },
+          { speaker: "MC", expression: "ME_EXPR_SOFT_SMILE", text: "I think that's because of you.\nYou make me want to try things\nthat scare me." },
+          { speaker: "MC", expression: "ME_EXPR_RELAXED", text: "Come on. Just the shallows.\nThe water's perfect." },
+          { speaker: "SYSTEM", expression: "", text: "She wades in carefully. Water up to\nher knees. She flinches at first—\nthen steadies. She's laughing at\nsomething you said, or maybe just\nat herself for being here at all.\nShoulders loose. Guard down.\nFor the first time, completely\nunguarded." },
+          { speaker: "SYSTEM", expression: "", text: "You realize how far out of her comfort zone she came, just to be here with you." },
+          { speaker: "SYSTEM", expression: "", text: "And then she's not laughing anymore." },
+          { speaker: "SYSTEM", expression: "", text: "The wave comes fast. The stumble.\nThe current. Her feet—\nHer feet catch on something under\nthe surface. She calls out—your name,\nmaybe, or just a sound—and then\nshe doesn't." },
+          { speaker: "SYSTEM", expression: "", text: "The water pulls her under." },
+          { speaker: "SYSTEM", expression: "", text: "Everything happens at once.\nAnd she can't get free.\nAgain." },
+          { speaker: "MC", expression: "ME_EXPR_DISTRESS", text: "—" }
+        ],
+        choices: [
+          { player_text: "Jump in immediately.",
+            effects: { ending: "GOOD_ENDING_SAVE_DIRECT", conditions: { I_min: 2 } } },
+          { player_text: "Call for help. Now.",
+            effects: { ending: "GOOD_ENDING_HELP_CALLED", conditions: { R_min: 2 } } },
+          { player_text: "Freeze.",
+            effects: { ending: "BAD_ENDING_4_DEATH" } }
+        ]
+      }]
+    }
+  ],
+  endings: [
+    {
+      ending_id: "GOOD_ENDING_SAVE_DIRECT", type: "positive", title: "You Stayed",
+      conditions_met: { I_min: 2 },
+      epilogue: [
+        "She's shaking, but not only from the cold.",
+        "The water was colder than you expected.",
+        "You didn't think. You didn't calculate. You moved.",
+        "Salt in your eyes. Current pulling at your legs. Your arms burned. Your lungs burned. But you held on.",
+        "You held on like it was the only thing you'd ever been good at.",
+        "Later—wrapped in towels, shaking, sitting on the sand while the ambulance lights paint everything red and blue—she finally breathes evenly again.",
+        "Neither of you speaks for a long time.",
+        "“You didn't save me,” she says quietly. Her voice is raw.",
+        "“You stayed.”",
+        "You don't know what to say to that. So you don't say anything.",
+        "You just stay.",
+        "And that was enough. It was always enough."
+      ]
+    },
+    {
+      ending_id: "GOOD_ENDING_HELP_CALLED", type: "positive", title: "You Knew Your Limits",
+      conditions_met: { R_min: 2 },
+      epilogue: [
+        "She went into the water knowing it scared her.",
+        "You shout. You wave. You don't hesitate.",
+        "Your voice cracks but it carries. Someone closer hears you. They're already moving.",
+        "Someone closer reaches her first. You watch, helpless but present, your hands shaking at your sides.",
+        "You don't look away. Not once.",
+        "Later, she sits beside you on the sand, feet buried, a borrowed blanket around her shoulders.",
+        "The sun is setting. The beach is emptying. The world is going on like nothing happened.",
+        "“You didn't disappear,” she says. Her voice is small.",
+        "“Everyone else in my life would have disappeared.”",
+        "“That mattered.”",
+        "You nod. You don't trust your voice.",
+        "Sometimes knowing your limits is the bravest thing. Sometimes staying on the shore and screaming for help is harder than jumping in."
+      ]
+    },
+    {
+      ending_id: "BAD_ENDING_1_ABANDONMENT", type: "negative", title: "You Left Quietly",
+      epilogue: [
+        "It took her a lot to invite someone into her life again.",
+        "You leave without a scene.",
+        "No words exchanged. No door slammed. No confrontation.",
+        "Just the click of the latch behind you, and the sound of your own breathing in the hallway.",
+        "You take the stairs instead of the elevator because you don't want to stand still.",
+        "Outside, the air is cool. The street is empty. You walk.",
+        "Later, you tell yourself it was simpler that way. Cleaner. That you did her a favor.",
+        "The thought never quite settles. It sits in your chest like a stone you swallowed whole.",
+        "She doesn't text. You don't either.",
+        "Some doors, once closed, don't open again. And some people spend the rest of their lives standing on the wrong side of them."
+      ]
+    },
+    {
+      ending_id: "BAD_ENDING_2_VIOLENCE", type: "negative", title: "You Crossed a Line",
+      epilogue: [
+        "The moment fractures.",
+        "The room becomes unsafe. The air changes. Something in your face shifts and she sees it before you do.",
+        "She steps back. Not away from the photo. Away from you.",
+        "What happens next is not shown.",
+        "Some choices don't need witnesses. Some moments are defined by their absence.",
+        "The apartment will be empty by morning.",
+        "There is no coming back from this. There never was."
+      ]
+    },
+    {
+      ending_id: "BAD_ENDING_3_HEARTBREAK", type: "negative", title: "You Used Words Like Weapons",
+      epilogue: [
+        "Your voice rises. Hers doesn't.",
+        "She stands very still while you talk. Her hands at her sides. Her eyes on yours.",
+        "She listens longer than she should. Longer than anyone should have to.",
+        "When you're done, the room is so quiet you can hear the clock on the wall.",
+        "There's nothing left to say. You said it all. Every ugly syllable.",
+        "The door closes gently behind you.",
+        "Gentler than you deserved.",
+        "Weeks later, you'll think about the way she didn't flinch. The way she just… absorbed it. Like she'd been practicing for this moment her whole life.",
+        "That thought will be the one that stays."
+      ]
+    },
+    {
+      ending_id: "BAD_ENDING_4_DEATH", type: "negative", title: "You Looked Away",
+      epilogue: [
+        "She was trying to be braver than her fear that day.",
+        "The waves keep moving.",
+        "People keep talking.",
+        "The sky doesn't care. The sun doesn't pause.",
+        "By the time you move, it's too late. By the time anyone moves, it's too late.",
+        "The beach empties slowly. The ambulance comes. The lights reflect off the wet sand.",
+        "Later—days later, weeks later, always—you replay the moment.",
+        "Not to understand it.",
+        "Not to learn from it.",
+        "But because your mind won't stop.",
+        "The wave. The stumble. The silence where her voice should have been.",
+        "It never stops."
+      ]
+    }
+  ]
+};
+
+// ════════════════════════════════════════
+//  ENGINE
+// ════════════════════════════════════════
+
+let Script = EmbeddedScript;
+
+const state = {
+  stats: { I: 0, R: 0, B: 0 },
+  flags: new Set(),
+  vars: {},
+  dayIndex: 0,
+  sceneIndex: 0,
+  dialogueIndex: 0,
+  mode: "boot",
+  endingId: null,
+  history: []
+};
+
+// ── Audio System (Web Audio API — no files) ──
+
+let audioCtx = null;
+let talkToggle = false;
+let currentMouthClosed = '';
+let currentMouthOpen = '';
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function beep(freq, dur, vol, type) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.type = type || 'square';
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(vol || 0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.start(t); osc.stop(t + dur);
+}
+
+let talkPostTransition = false;
+
+function talkBeep(isSystem) {
+  talkToggle = !talkToggle;
+  if (isSystem) beep(talkToggle ? 600 : 500, 0.03, 0.03, 'sawtooth');
+  else if (talkPostTransition) beep(talkToggle ? 260 : 220, 0.04, 0.05, 'square');
+  else beep(talkToggle ? 220 : 180, 0.04, 0.06, 'square');
+}
+
+function selectBeep() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(330, t);
+  osc.frequency.exponentialRampToValueAtTime(660, t + 0.06);
+  g.gain.setValueAtTime(0.08, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+  osc.start(t); osc.stop(t + 0.1);
+}
+
+function bootBeep() { beep(800, 0.02, 0.03, 'square'); }
+
+function postBeep() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.type = 'square';
+  osc.frequency.value = 1000;
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.setValueAtTime(0.15, t + 0.18);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  osc.start(t); osc.stop(t + 0.22);
+}
+
+function setMouthOpen(open) {
+  const el = document.getElementById('charMouth');
+  if (el) el.innerHTML = open ? currentMouthOpen : currentMouthClosed;
+}
+
+// ── Typewriter ──
+
+let twTimer = null;
+let twSkip = null;
+let spaceHeld = false;
+
+function typewrite(el, text, speed, onDone) {
+  clearTimeout(twTimer);
+  twSkip = null;
+  el.textContent = '';
+  el.classList.add('cursor');
+  let i = 0;
+  let bc = 0;
+  const baseSpeed = speed || 22;
+  const fastSpeed = 4;
+  const isSys = (document.getElementById("uiSpeaker")?.textContent || "") === "SYSTEM";
+  function tick() {
+    if (i < text.length) {
+      const ch = text[i];
+      el.textContent += ch;
+      i++;
+      if (ch !== ' ' && ch !== '\n' && ch !== '\r') {
+        bc++;
+        if (spaceHeld) {
+          if (bc % 6 === 0) { talkBeep(isSys); if (!isSys) setMouthOpen(bc % 12 < 6); }
+        } else {
+          if (bc % 2 === 0) { talkBeep(isSys); if (!isSys) setMouthOpen(bc % 4 < 2); }
+        }
+      }
+      twTimer = setTimeout(tick, spaceHeld ? fastSpeed : baseSpeed);
+    } else {
+      el.classList.remove('cursor');
+      setMouthOpen(false);
+      twSkip = null;
+      if (onDone) onDone();
+    }
+  }
+  twSkip = () => {
+    clearTimeout(twTimer);
+    el.textContent = text;
+    el.classList.remove('cursor');
+    setMouthOpen(false);
+    twSkip = null;
+    if (onDone) onDone();
+  };
+  tick();
+}
+
+function skipTypewriter() { if (twSkip) twSkip(); }
+
+document.addEventListener('keydown', (e) => {
+  if (state.mode === 'boot') return;
+  if (e.key === ' ') { e.preventDefault(); spaceHeld = true; }
+  if (e.key === 'Enter') { e.preventDefault(); skipTypewriter(); }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') spaceHeld = false;
+});
+
+// ── Utilities ──
+
+function toast(msg) { document.getElementById("toast").textContent = msg || ""; }
+
+function escapeHtml(s) {
+  return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function resetState() {
+  state.stats.I = Script.meta?.stats?.I?.start ?? 0;
+  state.stats.R = Script.meta?.stats?.R?.start ?? 0;
+  state.stats.B = Script.meta?.stats?.B?.start ?? 0;
+  state.flags = new Set();
+  state.vars = {};
+  state.dayIndex = 0;
+  state.sceneIndex = 0;
+  state.dialogueIndex = 0;
+  state.mode = "story";
+  state.endingId = null;
+  state.history = [];
+  toast("System restarted.");
+  render();
+}
+
+function bondState() {
+  const B = state.stats.B, R = state.stats.R;
+  if (B < -2) return "HATE";
+  if (B <= 2) return "NEUTRAL";
+  if (B >= 6 && R >= 3) return "LOVE";
+  return "FRIENDSHIP";
+}
+
+function currentDay() { return Script.days[state.dayIndex] || null; }
+function currentScene(day) { return day ? (day.scenes[state.sceneIndex] || null) : null; }
+
+function getBackground(day, scene) {
+  const bgId = resolveBackgroundId(day, scene);
+  const list = day.assets?.backgrounds || [];
+  return list.find(b => b.bg_id === bgId) || (bgId ? { bg_id: bgId, name: bgId, description: "" } : null);
+}
+
+function resolveBackgroundId(day, scene) {
+  if (!scene) return null;
+  if (scene.background) return scene.background;
+  if (scene.type === "contextual_scene" && scene.background_from_var) {
+    const v = state.vars[scene.background_from_var];
+    if (v === "RESTAURANT") return "BG_RESTAURANT_CASUAL";
+    if (v === "WALK") return "BG_CITY_WALK";
+    if (v === "ARCADE") return "BG_ARCADE";
+  }
+  return null;
+}
+
+// ── Cast helpers ─────────────────────────
+
+function getCharacter(charId) {
+  const chars = Script?.meta?.cast?.characters || [];
+  return chars.find(c => c.char_id === charId) || null;
+}
+
+function getForm(charId, formId) {
+  const ch = getCharacter(charId);
+  const forms = ch?.forms || [];
+  if (!forms.length) return null;
+  if (!formId) return forms[0];
+  return forms.find(f => f.form_id === formId) || forms[0];
+}
+
+function resolvePoseName(charId, formId, poseId) {
+  if (!poseId) return "—";
+  const form = getForm(charId, formId);
+  const pose = form?.poses?.find(p => p.pose_id === poseId) || null;
+  return pose?.name || poseId;
+}
+
+function resolveExprName(charId, formId, exprId) {
+  if (!exprId) return "—";
+  const form = getForm(charId, formId);
+  const expr = form?.expressions?.find(e => e.expr_id === exprId) || null;
+  return expr?.name || exprId;
+}
+
+function castInfo(scene) {
+  // Prefer per-scene cast; fall back to a day-level default cast.
+  const day = currentDay();
+  const castList = (scene?.cast && scene.cast.length)
+    ? scene.cast
+    : (day?.cast_default || day?.cast || null);
+
+  const c = (castList && castList[0]) ? castList[0] : null;
+  if (!c) return { pose: "—", expr: "—", charId: null, formId: null, postTransition: false };
+
+  const ch = getCharacter(c.char_id);
+  const form = getForm(c.char_id, c.form_id);
+
+  const poseLabel = resolvePoseName(c.char_id, c.form_id, c.pose_id);
+  const exprLabel = resolveExprName(c.char_id, c.form_id, (c.expr_id || c.default_expression));
+
+  const formId = form?.form_id || c.form_id || null;
+  const postTransition = (formId === "MC_POST") ? true : false;
+
+  return { pose: poseLabel, expr: exprLabel, charId: c.char_id, formId, postTransition };
+}
+
+function resolveSpeakerLabel(scene, dline) {
+  const speaker = dline?.speaker || "SYSTEM";
+  if (speaker === "SYSTEM") return "SYSTEM";
+
+  // Per-line override
+  if (dline?.speaker_label && String(dline.speaker_label).trim()) return String(dline.speaker_label).trim();
+
+  // If speaker isn't a known character id, display it as-is (e.g., "HR", "PLAYER", etc.)
+  const ch = getCharacter(speaker);
+  if (!ch) return speaker;
+
+  // Find current form (from scene/day cast)
+  const cast = castInfo(scene);
+  const form = getForm(speaker, cast.formId);
+
+  // Per-form name discovery flag (allows different reveal moments for PRE vs POST)
+  const flag = form?.discovery_flag || null;
+  const knows = flag ? state.flags.has(flag) : false;
+
+  if (knows) {
+    return form?.label_known || ch?.internal_name || ch?.name || speaker;
+  }
+  return form?.label_unknown || ch?.name_discovery?.fallback || "…";
+}
+
+function passesUnlock(day) {
+  const reqs = day.requirements?.unlock_conditions;
+  if (!reqs || !reqs.length) return true;
+  for (const r of reqs) {
+    if (r.stat) {
+      const v = state.stats[r.stat] ?? 0;
+      if (!compare(v, r.operator, r.value)) { toast(r.failure_result || "Locked."); return false; }
+    }
+    if (r.flag) { if (state.flags.has(r.flag) !== Boolean(r.value)) return false; }
+  }
+  return true;
+}
+
+function compare(a, op, b) {
+  switch (op) {
+    case ">=": return a >= b; case "<=": return a <= b;
+    case ">": return a > b;  case "<": return a < b;
+    case "==": return a === b; case "!=": return a !== b;
+    default: return false;
+  }
+}
+
+function applyEffects(effects) {
+  if (!effects) return;
+  if (effects.stats_delta) { for (const [k,v] of Object.entries(effects.stats_delta)) { if (typeof v === "number") state.stats[k] = (state.stats[k] ?? 0) + v; } }
+  if (effects.stats_set) { for (const [k,v] of Object.entries(effects.stats_set)) { if (typeof v === "number") state.stats[k] = v; } }
+  if (effects.flags_set) { for (const f of effects.flags_set) state.flags.add(f); }
+  if (effects.vars_set) { for (const [k,v] of Object.entries(effects.vars_set)) state.vars[k] = v; }
+}
+
+function checkEndingConditions(choice) {
+  const eff = choice.effects || {};
+  if (!eff.ending) return null;
+  const cond = eff.conditions || eff.conditions_met || null;
+  if (cond) {
+    if (typeof cond.I_min === "number" && state.stats.I < cond.I_min) return null;
+    if (typeof cond.R_min === "number" && state.stats.R < cond.R_min) return null;
+    if (typeof cond.B_min === "number" && state.stats.B < cond.B_min) return null;
+  }
+  return eff.ending;
+}
+
+function gotoEnding(endingId) { state.mode = "ending"; state.endingId = endingId; render(); }
+
+function advanceAfterScene() {
+  const day = currentDay();
+  if (!day) return;
+  let ns = state.sceneIndex + 1;
+  while (ns < day.scenes.length && day.scenes[ns].branch_only) { ns++; }
+  if (ns < day.scenes.length) {
+    state.sceneIndex = ns; state.dialogueIndex = 0; render(); return;
+  }
+  let next = state.dayIndex + 1;
+  while (next < Script.days.length) {
+    const saved = snapshot();
+    state.dayIndex = next; state.sceneIndex = 0; state.dialogueIndex = 0;
+    if (passesUnlock(currentDay())) { render(); return; }
+    else { restore(saved); next += 1; }
+  }
+  toast("End of script (no ending triggered).");
+  state.mode = "ending"; state.endingId = "NO_ENDING"; render();
+}
+
+function snapshot() {
+  return {
+    stats: { ...state.stats }, flags: new Set([...state.flags]), vars: { ...state.vars },
+    dayIndex: state.dayIndex, sceneIndex: state.sceneIndex, dialogueIndex: state.dialogueIndex,
+    mode: state.mode, endingId: state.endingId
+  };
+}
+function restore(snap) {
+  state.stats = { ...snap.stats }; state.flags = new Set([...snap.flags]); state.vars = { ...snap.vars };
+  state.dayIndex = snap.dayIndex; state.sceneIndex = snap.sceneIndex; state.dialogueIndex = snap.dialogueIndex;
+  state.mode = snap.mode; state.endingId = snap.endingId;
+}
+function pushHistory() { state.history.push(snapshot()); if (state.history.length > 80) state.history.shift(); }
+function popHistory() {
+  const last = state.history.pop();
+  if (last) { restore(last); toast(""); render(); }
+  else { toast("No more history."); }
+}
+
+// ── Render helpers ──
+
+function flashStat(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('stat-flash');
+  void el.offsetWidth;
+  el.classList.add('stat-flash');
+}
+
+function updateStats() {
+  const ids = { I: 'statI', R: 'statR', B: 'statB' };
+  for (const [k, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    const nv = String(state.stats[k]);
+    if (el.textContent !== nv) { el.textContent = nv; flashStat(id); }
+  }
+  document.getElementById("uiBondState").textContent = bondState();
+  document.getElementById("dbgFlags").textContent = [...state.flags].join(", ") || "—";
+  document.getElementById("dbgVars").textContent = Object.keys(state.vars).length ? JSON.stringify(state.vars) : "—";
+  document.getElementById("dbgHistory").textContent = String(state.history.length);
+}
+
+// ════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════
+
+function render() {
+  updateStats();
+  const uiChoices = document.getElementById("uiChoices");
+  uiChoices.innerHTML = "";
+
+  if (state.mode === "ending") { renderEnding(); return; }
+
+  const day = currentDay();
+  if (!day) { toast("No day found."); return; }
+  if (!passesUnlock(day)) { state.dayIndex += 1; state.sceneIndex = 0; state.dialogueIndex = 0; render(); return; }
+
+  const scene = currentScene(day);
+  if (!scene) { advanceAfterScene(); return; }
+
+  // Header
+  document.getElementById("uiDayTitle").textContent = `Day ${day.day_index}: ${day.title || day.day_id}`;
+  const meta = `${day.act || ""}${day.setting?.location ? " \u2022 " + day.setting.location : ""}${day.setting?.time_period ? " \u2022 " + day.setting.time_period : ""}`;
+  document.getElementById("uiDayMeta").textContent = meta.trim();
+  document.getElementById("uiNodeRef").textContent = `${day.day_id}/${scene.scene_id || ("S" + state.sceneIndex)}`;
+
+  // ASCII art
+  const bgId = resolveBackgroundId(day, scene);
+  const bg = getBackground(day, scene);
+  document.getElementById("uiAsciiArt").textContent = ASCII_ART[bgId] || `  [ ${bg?.name || bgId || 'UNKNOWN'} ]`;
+
+  // Hide old narration block (narration is now a SYSTEM dialogue line)
+  document.getElementById("uiNarration").style.display = "none";
+
+  // Build dialogue: day title + narration + filtered scene dialogue
+  let dialogue = (scene.dialogue || []).filter(d => {
+    if (!d.flag) return true;
+    if (d.flag.startsWith('!')) return !state.flags.has(d.flag.slice(1));
+    return state.flags.has(d.flag);
+  });
+  if (scene.narration) {
+    dialogue = [{ speaker: "SYSTEM", text: scene.narration }, ...dialogue];
+  }
+  // On the first scene of a day, show a "new day" title card first
+  if (state.sceneIndex === 0) {
+    const tp = day.setting?.time_period || "";
+    const loc = day.setting?.location || "";
+    const parts = [`— Day ${day.day_index}: ${day.title || day.day_id} —`];
+    if (tp) parts.push(tp);
+    if (loc) parts.push(loc);
+    dialogue = [{ speaker: "SYSTEM", text: parts.join("\n") }, ...dialogue];
+  }
+  const isLast = state.dialogueIndex >= dialogue.length - 1;
+  const isBranch = scene.type === "branch_select";
+
+  if (isBranch && dialogue.length === 0) {
+    renderDialogueLine({ speaker: "SYSTEM", text: scene.prompt || "Choose:" }, scene);
+    renderBranchChoices(day, scene);
+    return;
+  }
+  if (dialogue.length === 0) {
+    renderDialogueLine({ speaker: "SYSTEM", text: scene.prompt || "..." }, scene);
+    addContinueButton(); return;
+  }
+
+  const dline = dialogue[state.dialogueIndex] || dialogue[0];
+  renderDialogueLine(dline, scene, () => {
+    if (isBranch && isLast) { renderBranchChoices(day, scene); }
+    else if (isLast) { renderSceneChoices(day, scene); }
+    else { addAdvanceButton(); }
+  });
+}
+
+function renderDialogueLine(dline, scene, onReady) {
+  // Optional name reveal: infer the correct discovery flag from the current speaker form
+  if (dline && dline.reveal_name) {
+    const ci = castInfo(scene);
+    if (ci.charId && ci.formId) {
+      const f = getForm(ci.charId, ci.formId);
+      const flag = f?.discovery_flag || null;
+      if (flag) state.flags.add(flag);
+    }
+  }
+  const cast = castInfo(scene);
+  const shownSpeaker = resolveSpeakerLabel(scene, dline);
+
+  const isSystem = (shownSpeaker === "SYSTEM");
+const svgC = document.getElementById("uiCharSvg");
+  if (isSystem) { svgC.innerHTML = ''; svgC.style.display = 'none'; }
+  else { svgC.style.display = 'flex'; svgC.innerHTML = characterSVG(dline.expression || cast.expr, (cast.postTransition || state.dayIndex >= 3)); }
+
+  const sp = document.getElementById("uiSpeaker");
+  sp.textContent = shownSpeaker;
+  sp.className = isSystem ? "speaker-name system-speaker" : "speaker-name";
+
+  document.getElementById("uiCharPose").textContent = isSystem ? "—" : (cast.pose || "—");
+  document.getElementById("uiCharExpr").textContent = isSystem ? "—" : (dline.expression || cast.expr || "—");
+
+  const lineEl = document.getElementById("uiLine");
+  talkPostTransition = cast.postTransition;
+  typewrite(lineEl, dline.text || "", 22, onReady);
+}
+
+function addAdvanceButton() {
+  const c = document.getElementById("uiChoices");
+  const b = document.createElement("button");
+  b.className = "choice-btn primary-choice";
+  b.innerHTML = '<span class="choice-num">\u25B6</span><span>Continue</span>';
+  b.onclick = () => { selectBeep(); pushHistory(); state.dialogueIndex += 1; render(); };
+  c.appendChild(b);
+}
+
+function addContinueButton() {
+  const c = document.getElementById("uiChoices");
+  const b = document.createElement("button");
+  b.className = "choice-btn primary-choice";
+  b.innerHTML = '<span class="choice-num">\u25B6</span><span>Continue</span>';
+  b.onclick = () => { selectBeep(); pushHistory(); advanceAfterScene(); };
+  c.appendChild(b);
+}
+
+function renderBranchChoices(day, scene) {
+  const c = document.getElementById("uiChoices");
+  c.innerHTML = "";
+  (scene.choices || []).forEach((ch, i) => {
+    const b = document.createElement("button");
+    b.className = "choice-btn";
+    b.innerHTML = `<span class="choice-num">[${i+1}]</span><span>${escapeHtml(ch.player_text || "…")}</span>`;
+    b.onclick = () => {
+      selectBeep(); pushHistory(); applyEffects(ch.effects);
+      const target = ch.next_scene;
+      if (target) {
+        const idx = (day.scenes || []).findIndex(s => s.scene_id === target);
+        if (idx >= 0) { state.sceneIndex = idx; state.dialogueIndex = 0; render(); return; }
+      }
+      advanceAfterScene();
+    };
+    c.appendChild(b);
+  });
+}
+
+function renderSceneChoices(day, scene) {
+  const c = document.getElementById("uiChoices");
+  c.innerHTML = "";
+  if (!scene.choices || !scene.choices.length) { addContinueButton(); return; }
+  const filteredChoices = scene.choices.filter(ch => {
+    if (!ch.flag) return true;
+    if (ch.flag.startsWith('!')) return !state.flags.has(ch.flag.slice(1));
+    return state.flags.has(ch.flag);
+  });
+  if (!filteredChoices.length) { addContinueButton(); return; }
+  filteredChoices.forEach((ch, i) => {
+    const b = document.createElement("button");
+    b.className = "choice-btn";
+    b.innerHTML = `<span class="choice-num">[${i+1}]</span><span>${escapeHtml(ch.player_text || "…")}</span>`;
+    b.onclick = () => {
+      selectBeep(); pushHistory(); applyEffects(ch.effects);
+      const endingId = checkEndingConditions(ch);
+      if (endingId) { gotoEnding(endingId); return; }
+      const target = ch.next_scene;
+      if (target) {
+        const idx = (day.scenes || []).findIndex(s => s.scene_id === target);
+        if (idx >= 0) { state.sceneIndex = idx; state.dialogueIndex = 0; render(); return; }
+      }
+      const resp = ch.response || [];
+      if (resp.length) { showResponseSequence(day, scene, resp, 0); }
+      else { advanceAfterScene(); }
+    };
+    c.appendChild(b);
+  });
+}
+
+function showResponseSequence(day, scene, lines, idx) {
+  if (idx >= lines.length) { advanceAfterScene(); return; }
+  const c = document.getElementById("uiChoices");
+  c.innerHTML = "";
+  updateStats();
+  renderDialogueLine(lines[idx], scene, () => {
+    const b = document.createElement("button");
+    b.className = "choice-btn primary-choice";
+    b.innerHTML = '<span class="choice-num">\u25B6</span><span>Continue</span>';
+    b.onclick = () => {
+      selectBeep();
+      if (idx < lines.length - 1) showResponseSequence(day, scene, lines, idx + 1);
+      else advanceAfterScene();
+    };
+    c.appendChild(b);
+  });
+}
+
+function renderEnding() {
+  const e = Script.endings?.find(x => x.ending_id === state.endingId);
+  document.getElementById("uiDayTitle").textContent = "ENDING";
+  document.getElementById("uiDayMeta").textContent = "";
+  document.getElementById("uiNodeRef").textContent = state.endingId || "—";
+
+  const art = document.getElementById("uiAsciiArt");
+  if (e?.type === "positive") {
+    art.textContent = `\n       *    .  *       .    *\n    .    *        .       *    .\n  *       .    *      .\n      .       *    .       *\n    *    .        *   .\n       .    *  .       .    *\n`;
+  } else if (state.endingId === "NO_ENDING") {
+    art.textContent = `\n  \u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n  \u2502    END OF SCRIPT            \u2502\n  \u2502    No ending triggered      \u2502\n  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n`;
+  } else {
+    art.textContent = `\n  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n\n\n  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n`;
+  }
+
+  document.getElementById("uiNarration").style.display = "none";
+  document.getElementById("uiCharSvg").style.display = "none";
+
+  const sp = document.getElementById("uiSpeaker");
+  sp.textContent = "SYSTEM"; sp.className = "speaker-name system-speaker";
+  document.getElementById("uiCharPose").textContent = "—";
+  document.getElementById("uiCharExpr").textContent = "—";
+
+  const contentDiv = document.getElementById("uiDialogueBox").querySelector('.dialogue-content');
+  contentDiv.innerHTML = `
+    <div class="ending-title">${escapeHtml(e?.title || (state.endingId === "NO_ENDING" ? "End of Script" : "Unknown Ending"))}</div>
+    <div class="ending-type">${escapeHtml(e?.type ? "[ " + e.type.toUpperCase() + " ]" : "")}</div>
+    <div class="ending-epilogue">${(e?.epilogue || ["(No epilogue found.)"]).map(l => `<p>${escapeHtml(l)}</p>`).join("")}</div>
+  `;
+
+  const c = document.getElementById("uiChoices");
+  c.innerHTML = "";
+  const b = document.createElement("button");
+  b.className = "choice-btn primary-choice";
+  b.innerHTML = '<span class="choice-num">\u25B6</span><span>RESTART</span>';
+  b.onclick = () => resetState();
+  c.appendChild(b);
+}
+
+// ════════════════════════════════════════
+//  BOOT SEQUENCE
+// ════════════════════════════════════════
+
+function bootSequence() {
+  const lines = [
+    "TIMELINK INTERACTIVE NOVEL SYSTEM v1.0",
+    "(C) 1987 PHOSPHOR PRESS",
+    "",
+    "INITIALIZING NARRATIVE ENGINE...... OK",
+    "LOADING CHARACTER DATA............ OK",
+    "LOADING SCENE ASSETS.............. OK",
+    "LOADING DIALOGUE TREES............ OK",
+    "",
+    "MEMORY CHECK: 640K ............... OK",
+    "EMOTION PARSER: ONLINE",
+    ""
+  ];
+
+  const bootText = document.getElementById("bootText");
+  const bootPrompt = document.getElementById("bootPrompt");
+  let i = 0;
+
+  function showLine() {
+    if (i < lines.length) {
+      bootText.textContent += lines[i] + "\n";
+      if (lines[i].length > 0) bootBeep();
+      i++;
+      setTimeout(showLine, 180 + Math.random() * 120);
+    } else {
+      bootPrompt.style.display = "block";
+    }
+  }
+  showLine();
+
+  function dismiss() {
+    document.removeEventListener("keydown", dismiss);
+    document.removeEventListener("click", dismissClick);
+    initAudio();
+    postBeep();
+    bootPrompt.textContent = "SYSTEM READY.";
+    setTimeout(() => {
+      document.getElementById("bootScreen").style.display = "none";
+      document.getElementById("gameUI").style.display = "";
+      document.getElementById("mainUI").style.display = "";
+      state.mode = "story";
+      document.getElementById("pillProject").textContent = "Loaded: " + (Script.meta?.project || "Embedded Script");
+      resetState();
+    }, 400);
+  }
+  function dismissClick(e) { if (bootPrompt.style.display !== "none") dismiss(); }
+
+  document.addEventListener("keydown", dismiss);
+  document.addEventListener("click", dismissClick);
+}
+
+// ════════════════════════════════════════
+//  LOADING JSON
+// ════════════════════════════════════════
+
+async function loadFromFile(file) {
+  const text = await file.text();
+  const data = JSON.parse(text);
+  Script = normalizeScript(data);
+  document.getElementById("pillProject").textContent = "Loaded: " + (Script.meta?.project || file.name);
+  resetState();
+  toast("Loaded JSON: " + file.name);
+}
+
+function normalizeScript(data) {
+  if (!data) return EmbeddedScript;
+  if (data.days && Array.isArray(data.days)) {
+    return applyCastDefaults({ meta: data.meta || EmbeddedScript.meta, days: data.days, endings: data.endings || data.endings_append || EmbeddedScript.endings });
+  }
+  if (data.days_append || data.endings) {
+    const m = { meta: data.meta || EmbeddedScript.meta, days: [...(EmbeddedScript.days || [])], endings: [...(EmbeddedScript.endings || [])] };
+    if (Array.isArray(data.days_append)) m.days.push(...data.days_append);
+    if (Array.isArray(data.endings)) m.endings = data.endings;
+    return applyCastDefaults(m);
+  }
+  if (Array.isArray(data)) return applyCastDefaults({ meta: EmbeddedScript.meta, days: data, endings: EmbeddedScript.endings });
+  return EmbeddedScript;
+}
+
+function applyCastDefaults(script) {
+  // Allows JSON to keep cast at the root (Script.meta.cast) while referencing it minimally in days/scenes.
+  // Backward-compatible: if a day defines a cast (or cast_default), copy it into any scene missing one.
+  const days = script?.days || [];
+  for (const day of days) {
+    const defaultCast = day?.cast_default || day?.default_cast || day?.cast || null;
+    if (defaultCast && !day.cast_default) day.cast_default = defaultCast;
+    const scenes = day?.scenes || [];
+    for (const sc of scenes) {
+      if (!sc.cast && defaultCast) sc.cast = defaultCast;
+    }
+  }
+  return script;
+}
+
+// ════════════════════════════════════════
+//  UI WIRING
+// ════════════════════════════════════════
+
+document.getElementById("btnRestart").addEventListener("click", () => resetState());
+document.getElementById("btnBack").addEventListener("click", () => popHistory());
+document.getElementById("btnToggleDebug").addEventListener("click", () => {
+  const p = document.getElementById("debugPanel");
+  p.style.display = (p.style.display === "none") ? "block" : "none";
+});
+document.getElementById("fileInput").addEventListener("change", (ev) => {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  loadFromFile(file).catch(err => { console.error(err); toast("Failed to load JSON: " + err.message); });
+});
+
+// Start
+bootSequence();
+</script>
+</body>
+</html>

@@ -7,20 +7,13 @@
 html { height:100%; width:100%; }
 
 body {
-  align-content:space-around;
-  align-items:center;
   background-color:#345;
   color:#ffffff;
-  display:grid;
-  grid-template-columns:auto;
-  grid-template-rows:auto; /* auto; */
-  justify-items:center; /* horizotal center */
-  min-height:100%; /* stretch content to the full height*/
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-height:100%;
   width:100%;
-}
-
-canvas {
-  background-color:#234;
 }
 
 header {
@@ -29,20 +22,27 @@ header {
   font-size: 20px;
   width: 100%;
   height: 40px;
-  padding: 4px 10px 4px 10px;
-  position: absolute;
-  top: 0px;
-  cursor: none;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
 }
 
 header div {
-  position: relative;
   display: inline-block;
-  margin: 0 10px;
+  margin: 0 6px;
 }
 
 header form {
-  display: inline-block;  
+  display: inline-block;
+}
+
+canvas {
+  background-color:#234;
+  display: block;
+  flex: 1 1 auto;
 }
 
 .menu {
