@@ -342,12 +342,12 @@
                 game.paused = true;
                 sfx.die();
                 setTimeout(function() {
+                    if (state != states.GAME) return;
                     game.paused = false;
-                    game.reset();
                     if (game.lives > 0) {
                         game.lives--;
+                        game.reset();
                     } else {
-                        game.end();
                         changeStateTo(states.EDITOR);
                         setTimeout(function() {
                             alert("GAME OVER");
@@ -432,6 +432,8 @@
                 this.score = 0;
                 this.lives = 3;
                 this.keys = 0;
+                this.paused = false;
+                this.countdown = 0;
                 /* save game world to not destroy it */
                 world.save();
                 /* Initialize Ghosts and Dacman status */
@@ -614,12 +616,11 @@
                 /* GAGNE!  si toutes les gommes sont mangées */
                 if (game.dots == 0) {
                     sfx.win();
-                    game.end();
+                    changeStateTo(states.EDITOR);
                     setTimeout(function() {
                         alert("YOU WIN");
-                        changeStateTo(states.EDITOR);
-                        display.render();
                     }, 100);
+                    return;
                 }
             },
 
@@ -632,6 +633,7 @@
             end: function() {
                 /* Stop timer */
                 clearInterval(this.dacmanTimeID);
+                this.paused = false;
                 /* Reset world */
                 world.load();
             },
@@ -1363,14 +1365,11 @@
     }
 
     document.getElementById("new").addEventListener("click", function() {
-        /*
-        console.log("new");
-        */
         if (state == states.GAME) {
-            game.end();
+            changeStateTo(states.EDITOR);
         }
         world.clear();
-        changeStateTo(states.EDITOR);
+        display.render();
     });
 
     document.getElementById("edit").addEventListener("click", function() {
